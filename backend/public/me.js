@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("mine").innerHTML = tokens.map((t) => XL.tile(t)).join("");
     $("mineEmpty").hidden = !!tokens.length;
     $("mineEmpty").innerHTML = own
-      ? `<b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div>`
+      ? `<b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/app#compose">Launch my token</a></div>`
       : `<b>No tokens yet</b>@${fmt.esc(pub)} hasn't launched a token on XLaunch.`;
     $("sTokens").textContent = tokens.length;
     $("sTokens").nextSibling.textContent = tokens.length === 1 ? " token" : " tokens";

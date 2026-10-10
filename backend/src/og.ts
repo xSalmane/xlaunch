@@ -7,8 +7,12 @@ import { Resvg } from "@resvg/resvg-js";
 import type { TokenView } from "./market.js";
 
 const require = createRequire(import.meta.url);
-const fontDir = path.dirname(require.resolve("@expo-google-fonts/instrument-sans/package.json"));
-const FONTS = ["400Regular", "500Medium", "700Bold"].map((w) => path.join(fontDir, w, `InstrumentSans_${w}.ttf`)).filter((f) => fs.existsSync(f));
+const fontFiles = (pkg: string, prefix: string, weights: string[]) => {
+  const dir = path.dirname(require.resolve(`@expo-google-fonts/${pkg}/package.json`));
+  return weights.map((w) => path.join(dir, w, `${prefix}_${w}.ttf`)).filter((f) => fs.existsSync(f));
+};
+// mêmes polices que le site : Funnel Display pour les titres, Funnel Sans pour le texte
+const FONTS = [...fontFiles("funnel-display", "FunnelDisplay", ["700Bold", "800ExtraBold"]), ...fontFiles("funnel-sans", "FunnelSans", ["500Medium", "700Bold"])];
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 
@@ -51,7 +55,7 @@ export function artSvg(t: { token: string | null; symbol: string }, id: string) 
       <rect width="100" height="100" fill="url(#${id})"/>${pat}
       <circle cx="50" cy="50" r="27" fill="hsl(${h1},85%,52%)" stroke="#fff" stroke-opacity="0.95" stroke-width="2.4"/>
       <circle cx="50" cy="50" r="22.5" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="1.2"/>
-      <text x="50" y="50" dy="0.35em" text-anchor="middle" font-family="Instrument Sans" font-weight="700" font-size="${fs_.toFixed(1)}" fill="#fff">${esc(sym)}</text>`,
+      <text x="50" y="50" dy="0.35em" text-anchor="middle" font-family="Funnel Display" font-weight="700" font-size="${fs_.toFixed(1)}" fill="#fff">${esc(sym)}</text>`,
   };
 }
 
@@ -90,20 +94,20 @@ export function renderTokenCard(t: TokenView & { spark?: number[] }, opts: { upl
     ? `<image href="${logo}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid slice"/>`
     : art.inner;
   const up = t.change24h >= 0;
-  const col = up ? "#2fd18f" : "#ff6676";
+  const col = up ? "#66c800" : "#fc401f";
   const sp = sparkPath(t.spark?.length ? t.spark : [t.price], 640, 430, 480, 92);
   const sym = fit("$" + t.symbol, 11);
   const symSize = Math.round(Math.min(104, 520 / (sym.length * 0.72)));
-  const milestone = t.milestone ? `<g transform="translate(96,104) rotate(-3)"><rect width="${usd(t.milestone).length * 13 + 96}" height="44" rx="22" fill="#111827" fill-opacity="0.82" stroke="#ffb800" stroke-opacity="0.8" stroke-width="2"/><path transform="translate(14,10)" d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8L12 17.6 5.9 20.8l1.2-6.8L2.2 9.2l6.8-1z" fill="#ffd257"/><text x="44" y="29" font-size="20" font-weight="700" fill="#ffd257">Hit ${usd(t.milestone)}</text></g>` : "";
+  const milestone = t.milestone ? `<g transform="translate(96,104) rotate(-3)"><rect width="${usd(t.milestone).length * 13 + 96}" height="44" rx="22" fill="#111827" fill-opacity="0.82" stroke="#ffd12f" stroke-opacity="0.8" stroke-width="2"/><path transform="translate(14,10)" d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8L12 17.6 5.9 20.8l1.2-6.8L2.2 9.2l6.8-1z" fill="#ffd257"/><text x="44" y="29" font-size="20" font-weight="700" fill="#ffd257">Hit ${usd(t.milestone)}</text></g>` : "";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
     <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
     <clipPath id="clip"><rect x="0" y="0" width="100" height="100" rx="8"/></clipPath>
     <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient>
-    <linearGradient id="brand" x1="0" x2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="0.55" stop-color="#8a5cff"/><stop offset="1" stop-color="#ff3d7f"/></linearGradient>
+    
   </defs>
-  <rect width="${W}" height="${H}" fill="#070b14"/>
+  <rect width="${W}" height="${H}" fill="#0a0b0d"/>
   <g filter="url(#blur)" opacity="0.55"><circle cx="300" cy="315" r="260" fill="hsl(${art.hue},85%,52%)"/></g>
   <g transform="translate(70,80) rotate(-3 235 235)">
     <rect x="-2" y="-2" width="474" height="474" rx="40" fill="#fff" fill-opacity="0.16"/>
@@ -111,23 +115,23 @@ export function renderTokenCard(t: TokenView & { spark?: number[] }, opts: { upl
   </g>
   ${milestone}
   <text x="640" y="150" font-size="28" font-weight="500" fill="#ffffff" fill-opacity="0.7">@${esc(fit(t.creator, 15))} · paired with ${esc(t.quote.symbol)}</text>
-  <text x="634" y="${150 + symSize + 4}" font-size="${symSize}" font-weight="700" fill="#ffffff" letter-spacing="-3">${esc(sym)}</text>
+  <text x="634" y="${150 + symSize + 4}" font-family="Funnel Display" font-size="${symSize}" font-weight="800" fill="#ffffff" letter-spacing="-3">${esc(sym)}</text>
   <text x="640" y="${150 + symSize + 52}" font-size="32" font-weight="500" fill="#ffffff" fill-opacity="0.82">${esc(fit(t.name, 26))}</text>
-  <text x="640" y="410" font-size="56" font-weight="700" fill="#ffffff">${usd(t.mcapUsd)}<tspan dx="18" font-size="34" fill="${col}">${pct(t.change24h)}</tspan></text>
+  <text x="640" y="410" font-family="Funnel Display" font-size="58" font-weight="800" fill="#ffffff">${usd(t.mcapUsd)}<tspan dx="18" font-size="34" fill="${col}">${pct(t.change24h)}</tspan></text>
   <text x="640" y="350" font-size="22" font-weight="500" fill="#ffffff" fill-opacity="0.55">MARKET CAP</text>
   <path d="${sp.area}" fill="url(#fade)"/>
   <path d="${sp.line}" fill="none" stroke="${col}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-  <path transform="translate(640,551)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.2 0 3.7 1.2 5.2 3 1.5-1.8 3-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z" fill="#ff2d55"/>
+  <path transform="translate(640,551)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.2 0 3.7 1.2 5.2 3 1.5-1.8 3-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z" fill="#fc401f"/>
   <text x="674" y="575" font-size="26" font-weight="700" fill="#ffffff">${t.likes}<tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.trades} trade${t.trades === 1 ? "" : "s"}</tspan><tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.comments} comment${t.comments === 1 ? "" : "s"}</tspan></text>
-  <rect x="0" y="${H - 8}" width="${W}" height="8" fill="url(#brand)"/>
-  <circle cx="${Math.round(1130 - opts.site.length * 28 * 0.6 - 24)}" cy="52" r="12" fill="none" stroke="#3d7dff" stroke-width="5"/><circle cx="${Math.round(1130 - opts.site.length * 28 * 0.6 - 24)}" cy="52" r="4.5" fill="#3d7dff"/>
-  <text x="1130" y="62" font-size="28" font-weight="700" fill="#ffffff" text-anchor="end">${esc(opts.site)}</text>
+  <rect x="0" y="${H - 8}" width="${W}" height="8" fill="#0000ff"/>
+  <circle cx="${Math.round(1130 - opts.site.length * 30 * 0.66 - 26)}" cy="52" r="12" fill="none" stroke="#0000ff" stroke-width="5"/><circle cx="${Math.round(1130 - opts.site.length * 30 * 0.66 - 26)}" cy="52" r="4.5" fill="#0000ff"/>
+  <text x="1130" y="62" font-family="Funnel Display" font-size="30" font-weight="700" fill="#ffffff" text-anchor="end">${esc(opts.site)}</text>
   <text x="1130" y="94" font-size="16" font-weight="700" fill="#ffffff" fill-opacity="0.45" text-anchor="end" letter-spacing="2">${esc(opts.chainLabel)}</text>
 </svg>`;
 
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: W },
-    font: { fontFiles: FONTS, loadSystemFonts: true, defaultFontFamily: "Instrument Sans" },
+    font: { fontFiles: FONTS, loadSystemFonts: true, defaultFontFamily: "Funnel Sans" },
   });
   return resvg.render().asPng();
 }

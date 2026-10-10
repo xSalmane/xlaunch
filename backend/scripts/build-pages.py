@@ -33,7 +33,7 @@ def page(script, content):
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js" defer></script>
 {f'<script src="/static/{script}" defer></script>' if script else ""}
@@ -42,10 +42,10 @@ def page(script, content):
 <div class="app">
   <aside class="side-nav" aria-label="Menu">
     <a class="brand" href="/" aria-label="XLaunch home"><span class="brand-mark"></span><span class="brand-name">XLaunch</span></a>
-    <a class="nav-link" data-nav href="/">{i("home")}<span>Home</span></a>
+    <a class="nav-link" data-nav href="/app">{i("home")}<span>Home</span></a>
     <a class="nav-link" data-nav href="/explore">{i("search")}<span>Explore</span></a>
     <a class="nav-link" data-nav href="/me">{i("coins")}<span>Earnings</span></a>
-    <a class="btn btn-launch" href="/#compose" aria-label="Launch a token">{i("feather")}<span class="lbl">Launch a token</span></a>
+    <a class="btn btn-launch" href="/app#compose" aria-label="Launch a token">{i("feather")}<span class="lbl">Launch a token</span></a>
     <div class="side-me" data-auth></div>
   </aside>
 
@@ -64,11 +64,11 @@ def page(script, content):
   </aside>
 </div>
 <nav class="tabbar" aria-label="Navigation">
-  <a data-nav href="/" aria-label="Home">{i("home")}</a>
+  <a data-nav href="/app" aria-label="Home">{i("home")}</a>
   <a data-nav href="/explore" aria-label="Explore">{i("search")}</a>
   <a data-nav href="/me" aria-label="Earnings">{i("coins")}</a>
 </nav>
-<a class="fab" href="/#compose" aria-label="Launch a token">{i("plus")}</a>
+<a class="fab" href="/app#compose" aria-label="Launch a token">{i("plus")}</a>
 </body>
 </html>
 '''
@@ -139,7 +139,7 @@ EXPLORE = f'''    <div class="col-head">
     <div class="more"><button class="btn quiet" type="button" id="more" hidden>Show more</button></div>'''
 
 TOKEN = f'''    <div class="col-head">
-      <div class="col-title"><a class="back" href="/" aria-label="Back">{i("back")}</a><div><h1 id="hTitle">Token</h1><div class="sub" id="hSub"></div></div></div>
+      <div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><div><h1 id="hTitle">Token</h1><div class="sub" id="hSub"></div></div></div>
     </div>
     <div id="post" class="ig-feed"></div>
     <section class="section">
@@ -188,7 +188,7 @@ TOKEN = f'''    <div class="col-head">
     <div class="feed-empty" id="noTrades" hidden><b>No trades yet</b>The first buyer gets the starting price.</div>'''
 
 ME = f'''    <div class="col-head">
-      <div class="col-title"><a class="back" href="/" aria-label="Back">{i("back")}</a><div><h1 id="pTitle">Earnings</h1><div class="sub" id="pSub"></div></div></div>
+      <div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><div><h1 id="pTitle">Earnings</h1><div class="sub" id="pSub"></div></div></div>
     </div>
 
     <div class="feed-empty" id="loggedOut" hidden>
@@ -249,7 +249,7 @@ ME = f'''    <div class="col-head">
       </section>
       <section id="tab-tokens">
         <div id="mine" class="grid"></div>
-        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>
+        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/app#compose">Launch my token</a></div></div>
       </section>
 
       <section id="tab-gains" class="section" style="border-bottom:0" hidden>
@@ -280,7 +280,7 @@ ME = f'''    <div class="col-head">
 
     </div>'''
 
-NOTFOUND = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/" aria-label="Back">{i("back")}</a><h1>Not found</h1></div></div>
+NOTFOUND = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><h1>Not found</h1></div></div>
     <div class="feed-empty"><b>This page doesn't exist</b>This address doesn't match any page or XLaunch token.<div style="margin-top:14px"><a class="btn" href="/explore">Explore tokens</a></div></div>'''
 
 for name, script, content in [("index", "home.js", HOME), ("explore", "explore.js", EXPLORE), ("token", "token.js", TOKEN), ("me", "me.js", ME), ("404", None, NOTFOUND)]:

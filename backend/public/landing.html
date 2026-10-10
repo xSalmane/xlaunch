@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/landing.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/landing.js" defer></script>
+</head>
+<body class="l">
+<header class="l-nav">
+  <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+  <nav class="l-links" aria-label="Main">
+    <a href="/app">Feed</a>
+    <a href="/explore">Explore</a>
+    <a href="/me">Earnings</a>
+  </nav>
+  <div class="l-nav-end"><div class="auth" data-auth></div><a class="btn" href="/app">Open app</a></div>
+</header>
+
+<main>
+  <!-- le mur : chaque carré est un token lancé depuis X -->
+  <section class="l-hero">
+    <div class="l-copy">
+      <h1>Post it on X.<br>It trades on Base.</h1>
+      <p class="l-lede">Name a token and launch it in one click. We pay the gas, the whole supply goes into a Uniswap pool nobody can pull, and half of every trading fee is yours.</p>
+      <form class="l-start" id="start" action="/app" novalidate>
+        <label class="l-start-field"><span class="sr">Token name</span><input id="startName" name="name" maxlength="32" autocomplete="off" placeholder="Name your token"></label>
+        <button class="btn" type="submit">Launch it</button>
+      </form>
+      <p class="l-note">No wallet needed. Sign in with X, that's it.</p>
+      <dl class="l-live">
+        <div><dt>Tokens launched</dt><dd id="sLaunches">—</dd></div>
+        <div><dt>Traded in 24h</dt><dd id="sVol">—</dd></div>
+        <div><dt>Gas you pay</dt><dd>$0</dd></div>
+      </dl>
+    </div>
+    <figure class="l-wall-wrap">
+      <div class="l-wall" id="wall" aria-label="Tokens launched from X"></div>
+      <figcaption class="l-wall-cap"><span class="live-dot"></span>Every square is a token launched from X. New ones land here live.</figcaption>
+    </figure>
+  </section>
+
+  <section class="l-band l-steps" aria-labelledby="stepsTitle">
+    <h2 id="stepsTitle">From post to pool in three steps</h2>
+    <ol>
+      <li>
+        <div class="l-step-ui l-ui-compose">
+          <span class="l-ui-av"></span>
+          <div><b>Moon Cat</b><span class="l-ui-tick">$MCAT</span><span class="pairtag">ETH</span></div>
+        </div>
+        <h3>Post</h3>
+        <p>Sign in with X, name your token and pick what it trades against: ETH, USDC or a tokenized stock.</p>
+      </li>
+      <li>
+        <div class="l-step-ui l-ui-tx">
+          <span class="l-ui-check" aria-hidden="true"></span>
+          <div><b>Live on Base</b><span>Pool created, liquidity locked</span></div>
+        </div>
+        <h3>Launch</h3>
+        <p>We deploy it on Base and pay the gas. All 1 billion tokens go into the pool, so nobody holds a bag to dump.</p>
+      </li>
+      <li>
+        <div class="l-step-ui l-ui-earn">
+          <span>You earned</span><b id="stepEarn">$0.00</b>
+        </div>
+        <h3>Earn</h3>
+        <p>Every trade pays a 1% fee. Half of it is yours, tied to your X account and claimable whenever you want.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="l-band l-trend" aria-labelledby="trendTitle">
+    <div class="l-head"><h2 id="trendTitle">Most liked today</h2><a href="/explore?sort=trending">See all tokens</a></div>
+    <div class="l-rows" id="trend"></div>
+  </section>
+
+  <section class="l-band l-split l-pairs" aria-labelledby="pairsTitle">
+    <div>
+      <h2 id="pairsTitle">Pair it with crypto or a stock</h2>
+      <p>Your token can trade against ETH, USDC or the tokenized stocks issued on Base. Its price moves in that asset, and so do your fees.</p>
+    </div>
+    <div class="l-chips" id="pairs"></div>
+  </section>
+
+  <section class="l-band l-split l-card" aria-labelledby="cardTitle">
+    <div>
+      <h2 id="cardTitle">It lives inside the tweet</h2>
+      <p>Post your link and it unfolds into a card people can use without leaving X: launch, like, scroll the hottest tokens, buy. This one is live, try it.</p>
+    </div>
+    <div class="l-tweet">
+      <div class="l-tweet-head"><span class="brand-mark"></span><div><b>XLaunch</b> <span class="mute">· now</span><br>Launch yours right here 👇</div></div>
+      <iframe src="/embed" title="XLaunch card, as it appears on X" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <section class="l-band l-facts" aria-labelledby="factsTitle">
+    <h2 id="factsTitle">The fine print, in big print</h2>
+    <dl>
+      <div><dt>100%</dt><dd>of the supply goes into the pool at launch. No team allocation, no presale.</dd></div>
+      <div><dt>Locked</dt><dd>The liquidity position stays in the contract forever. It can't be pulled.</dd></div>
+      <div><dt>50%</dt><dd>of the 1% trading fee goes to the creator, in the pair asset and in the token.</dd></div>
+      <div><dt>$0</dt><dd>gas for you. The platform pays to deploy every token.</dd></div>
+    </dl>
+  </section>
+
+  <section class="l-final">
+    <h2>Your token is one post away.</h2>
+    <a class="btn" href="/app#compose">Launch a token</a>
+  </section>
+</main>
+
+<footer class="l-foot">
+  <span class="brand"><span class="brand-mark"></span>XLaunch</span>
+  <p>Runs on Base. Tokens are speculative: only put in what you can afford to lose.</p>
+  <nav aria-label="Footer"><a href="/app">Feed</a><a href="/explore">Explore</a><a href="/me">Earnings</a><a href="/me#referrals">Invite friends</a></nav>
+</footer>
+</body>
+</html>

@@ -131,7 +131,10 @@ document.addEventListener("DOMContentLoaded", () => {
     $("done").hidden = true; $("compose").hidden = false; $("name").focus();
   });
 
-  // ouvert depuis « Lancer un token » (/#compose)
+  // arrivée depuis la vitrine avec un nom déjà tapé (/app?name=…#compose)
+  const preName = new URLSearchParams(location.search).get("name");
+  if (preName) { $("name").value = preName.slice(0, 32); $("name").dispatchEvent(new Event("input")); history.replaceState(null, "", "/app" + location.hash); }
+  // ouvert depuis « Lancer un token » (/app#compose)
   if (location.hash === "#compose") setTimeout(() => $("name").focus(), 50);
   window.addEventListener("hashchange", () => { if (location.hash === "#compose") $("name").focus(); });
 

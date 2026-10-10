@@ -84,7 +84,16 @@ function render(file: string, meta: { title: string; description: string; player
   return versioned(html.replace("<!--META-->", tags));
 }
 
+// vitrine
 app.get("/", (_req, res) => {
+  res.type("html").send(render("landing.html", {
+    title: "XLaunch — launch your token on Base, right from X",
+    description: "A name, a ticker, one click. Gas is on us, and you earn a share of every trade.",
+    player: `${config.publicUrl}/embed`,
+  }));
+});
+// l'app (fil, lancement)
+app.get("/app", (_req, res) => {
   res.type("html").send(render("index.html", {
     title: "XLaunch — launch your token on Base, right from X",
     description: "A name, a ticker, one click. Gas is on us, and you earn a share of every trade.",

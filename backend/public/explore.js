@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
       $("empty").hidden = !!shown.length;
       $("empty").innerHTML = q
         ? `<b>No results for "${XL.fmt.esc(q)}"</b>Try another name, a $ticker, an @creator or a pair (USDC, tNVDA…).`
-        : `<b>No tokens yet</b>The first one could be yours.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch a token</a></div>`;
+        : `<b>No tokens yet</b>The first one could be yours.<div style="margin-top:14px"><a class="btn" href="/app#compose">Launch a token</a></div>`;
     } catch (e) {
       $("empty").hidden = false;
       $("empty").textContent = e.message;

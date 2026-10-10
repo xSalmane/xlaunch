@@ -15,7 +15,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@expo-google-fonts/instrument-sans": "^0.4.2",
+    "@expo-google-fonts/funnel-display": "^0.4.1",
+    "@expo-google-fonts/funnel-sans": "^0.4.2",
     "@resvg/resvg-js": "^2.6.2",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^18.0.7",
