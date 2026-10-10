@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,225 +8,115 @@
 <base target="_blank">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <style>
-  /* X affiche la carte dans une boîte d'environ 400×400 : tout tient sans défiler.
-     Toute la carte est une rampe de lancement : bleu Base quadrillé comme un graphique de trading. */
-  :root { --glass: rgb(255 255 255 / 0.14); --glass-line: rgb(255 255 255 / 0.22); }
+  /* La carte X : un terminal bleu Base. Tout tient dans ~400×400 ; la sortie défile dans le terminal. */
   html, body { height: 100%; }
-  body { display: flex; flex-direction: column; overflow: hidden; font-size: 14px; color: #fff; background-color: #0000ff;
-    background-image: linear-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
-    background-size: 34px 34px; background-position: -1px -1px; }
+  body { margin: 0; display: flex; flex-direction: column; overflow: hidden; background: #0000ff; color: #fff; font: 500 12.5px/1.5 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .testnet { display: none; }
+  a { color: inherit; }
+  .bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid rgb(255 255 255 / 0.3); white-space: nowrap; }
+  .bar .usr { font-weight: 800; }
+  .bar .cwd { color: rgb(255 255 255 / 0.65); }
+  .tabs { display: flex; gap: 2px; margin-left: auto; }
+  .tabs button, .bar .login { border: 0; background: none; color: rgb(255 255 255 / 0.75); padding: 2px 6px; font: 700 12px "JetBrains Mono", monospace; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: #fff; color: #0000ff; }
+  .bar .login { color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+  .bar .login:hover, .tabs button:hover { background: rgb(255 255 255 / 0.15); }
+  .tabs button[aria-selected="true"]:hover { background: #fff; }
 
-  /* ---------------------------------------------------------------- en-tête */
-  .hd { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px; position: relative; z-index: 3; }
-  .hd .brand { padding: 4px; gap: 7px; font-size: 17px; color: #fff; }
-  .hd .brand:hover { background: none; }
-  .hd .brand-mark { width: 20px; height: 20px; background: #fff; box-shadow: inset 0 0 0 4px #0000ff, 0 0 0 2px #fff; }
-  .seg { --i: 0; position: relative; display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; max-width: 230px; margin: 0 auto; padding: 3px; border-radius: 999px; background: rgb(0 0 120 / 0.35); box-shadow: inset 0 0 0 1px var(--glass-line); }
-  .seg::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 999px; background: #fff; transform: translateX(calc(var(--i) * 100%)); transition: transform 0.3s cubic-bezier(.2,.9,.2,1), opacity 0.2s; }
-  .seg.none::before { opacity: 0; }
-  .seg button { position: relative; z-index: 1; border: 0; background: none; color: rgb(255 255 255 / 0.85); font-weight: 700; font-size: 13px; padding: 6px 4px; cursor: pointer; border-radius: 999px; white-space: nowrap; transition: color 0.2s; }
-  .seg button[aria-selected="true"] { color: #0000ff; }
-  .hd .auth .who { width: auto; padding: 0; }
-  .hd .auth .who img, .hd .auth .avatar-ph { width: 30px; height: 30px; box-shadow: 0 0 0 2px #0000ff, 0 0 0 3.5px #fff; }
-  .hd .auth .who-txt, .hd .auth .who-out { display: none; }
-  .hd .auth .btn { width: auto; padding: 6px 11px; font-size: 13px; gap: 6px; background: #fff; color: #0a0b0d; }
-  .hd .auth .btn .lbl { font-size: 0; }
-  .hd .auth .btn .lbl::after { content: "Sign in"; font-size: 13px; }
+  .scr { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; scrollbar-width: none; overscroll-behavior: contain; }
+  .scr::-webkit-scrollbar { display: none; }
+  .ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .dim { color: rgb(255 255 255 / 0.62); }
+  .ok { color: #b6f569; }
+  .warn { color: #ffd12f; }
+  .pr { color: rgb(255 255 255 / 0.62); }
+  .cmd { display: grid; gap: 3px; margin-top: 8px; }
+  .cl { display: flex; align-items: baseline; white-space: nowrap; min-width: 0; }
+  .cl.in { padding-left: 2ch; }
+  .cl .pr { margin-right: 1ch; }
+  .cl .flag { width: 9ch; flex: none; }
+  .bs { color: rgb(255 255 255 / 0.45); margin-left: 6px; }
+  .cmd .flag { color: rgb(255 255 255 / 0.8); }
+  .cmd input, .cmd select { background: rgb(255 255 255 / 0.12); border: 0; border-bottom: 2px solid #fff; border-radius: 0; color: #fff; padding: 1px 4px; outline: none; font: 700 12.5px "JetBrains Mono", monospace; min-width: 0; }
+  .cmd input:focus, .cmd select:focus { background: rgb(255 255 255 / 0.24); }
+  .cmd input::placeholder { color: rgb(255 255 255 / 0.5); font-weight: 500; }
+  .cmd select option, .cmd select optgroup { color: #0a0b0d; background: #fff; }
+  #name { width: 170px; } #symbol { width: 110px; text-transform: uppercase; } #description { width: 190px; }
+  .attach { border: 0; background: none; color: #fff; font: 700 12.5px "JetBrains Mono", monospace; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .runrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .btn-t { display: inline-block; border: 0; background: #fff; color: #0000ff; font: 800 13px "JetBrains Mono", monospace; padding: 6px 12px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .btn-t:hover { background: #ebebff; }
+  .btn-t:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-o { background: none; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+  .btn-o:hover { background: rgb(255 255 255 / 0.15); }
+  .quota { color: rgb(255 255 255 / 0.62); font-size: 11.5px; line-height: 1.3; }
+  .cur { display: inline-block; width: 8px; height: 15px; background: #fff; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .ascii { font-weight: 800; line-height: 1.15; margin: 8px 0 6px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .out { margin-top: 10px; }
 
-  .main { flex: 1; min-height: 0; position: relative; }
-  .view { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
-
-  /* ---------------------------------------------------------------- le ciel : les vols des derniers tokens, ta pièce sur la rampe */
-  .sky { flex: 1; min-height: 70px; position: relative; overflow: hidden; }
-  .sky svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  .f-old { fill: none; stroke: #3c8aff; stroke-width: 1.6; stroke-linecap: round; }
-  .f-node { fill: #3c8aff; }
-  .f-tag { fill: #fff; fill-opacity: 0.6; font: 700 10.5px var(--text); }
-  .f-plan { fill: none; stroke: #fff; stroke-opacity: 0.55; stroke-width: 1.6; stroke-dasharray: 3 7; stroke-linecap: round; }
-  .f-live { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  .f-glow { fill: none; stroke: #fff; stroke-opacity: 0.22; stroke-width: 12; stroke-linecap: round; }
-  .f-spark { fill: #fff; }
-  .f-ring { fill: none; stroke: #fff; }
-  .pad { position: absolute; left: 16px; bottom: 6px; width: 70px; height: 12px; border-radius: 50%; background: rgb(0 0 120 / 0.45); }
-  .pad-coin { position: absolute; left: 0; top: 0; z-index: 2; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; overflow: hidden; cursor: pointer; background: #fff; box-shadow: 0 0 0 3px #fff, 0 8px 20px rgb(0 0 60 / 0.5); will-change: transform; }
-  .pad-coin .e-art, .pad-coin .e-art > svg, .pad-coin .e-art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pad-coin input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .pad-cam { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #0a0b0d; color: #fff; pointer-events: none; box-shadow: 0 0 0 2px #fff; }
-  .pad-cam svg.i { width: 12px; height: 12px; }
-  .flying .pad-cam { display: none; }
-  .sky-pin { position: absolute; left: 0; top: 0; z-index: 3; padding: 6px 10px; border-radius: 10px; background: #fff; color: #0a0b0d; white-space: nowrap; opacity: 0; transform: translate(calc(-100% - 34px), -50%) scale(0.9); transform-origin: right center; transition: opacity 0.3s, transform 0.4s cubic-bezier(.2,.9,.2,1); }
-  .sky-pin.on { opacity: 1; transform: translate(calc(-100% - 42px), -50%) scale(1); }
-  .sky-pin b { display: block; font: 700 16px/1.1 var(--display); letter-spacing: -0.02em; }
-  .sky-pin span { font-size: 11.5px; color: #5b616e; }
-  .sky-pin::after { content: ""; position: absolute; top: 50%; right: -12px; width: 12px; height: 2px; margin-top: -1px; background: #fff; }
-  .sky-hint { position: absolute; left: 84px; bottom: 12px; font-size: 12px; color: rgb(255 255 255 / 0.75); pointer-events: none; transition: opacity 0.3s; }
-  .flying .sky-hint { opacity: 0; }
-  .chip-test { display: none; position: absolute; top: 6px; left: 12px; z-index: 2; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; color: #0000ff; background: #fff; }
-  body[data-chain="testnet"] .chip-test { display: inline-block; }
-
-  /* ---------------------------------------------------------------- le composer, façon post X */
-  .cmp { flex: none; position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; margin: 0 8px 8px; padding: 11px 12px 10px; border-radius: 18px; background: #fff; color: #0a0b0d; box-shadow: 0 16px 34px -14px rgb(0 0 60 / 0.6); }
-  .cmp-top { display: flex; align-items: center; gap: 9px; }
-  .cmp-av { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: none; background: #0a0b0d; display: grid; place-items: center; }
-  .cmp-av img { width: 100%; height: 100%; object-fit: cover; }
-  .cmp-av .x-logo { width: 14px; height: 14px; fill: #fff; }
-  .cmp-name { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: #0a0b0d; font: 600 19px/1.2 var(--text); padding: 2px 0; }
-  .cmp-name::placeholder, .cmp-vibe::placeholder, .cmp-tick input::placeholder { color: #8b919d; }
-  .cmp-row { display: flex; gap: 6px; }
-  .cmp-tick { flex: 1; min-width: 0; width: 0; display: flex; align-items: center; padding: 0 4px 0 11px; border-radius: 999px; background: #eef0f3; }
-  .cmp-tick b { color: #5b616e; }
-  .cmp-tick input { border: 0; background: none; outline: none; color: #0a0b0d; width: 100%; min-width: 0; text-transform: uppercase; font-weight: 800; padding: 7px 4px; }
-  .cmp-pair { flex: 1.05; min-width: 0; width: 0; border: 0; border-radius: 999px; background: #eef0f3; color: #0a0b0d; font-weight: 700; font-size: 13px; padding: 7px 10px; cursor: pointer; }
-  .cmp-vibe { border: 0; outline: none; background: none; color: #0a0b0d; padding: 2px 2px; font-size: 14px; width: 100%; }
-  .cmp-tick:focus-within, .cmp-pair:focus { box-shadow: inset 0 0 0 1.5px #0000ff; }
-  .cmp-bar { display: flex; align-items: center; gap: 8px; border-top: 1px solid #dee1e7; padding-top: 8px; }
-  .cmp-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #0000ff; cursor: pointer; flex: none; }
-  .cmp-ic:hover { background: #ebebff; }
-  .cmp-ic svg.i { width: 19px; height: 19px; }
-  .cmp-quota { flex: 1; min-width: 0; font-size: 11.5px; color: #5b616e; line-height: 1.25; }
-  .cmp-go { border: 0; border-radius: 999px; padding: 9px 18px; background: #0a0b0d; color: #fff; font: 800 14px/1 var(--text); cursor: pointer; white-space: nowrap; transition: transform 0.12s, background 0.2s; }
-  .cmp-go:hover { background: #0000ff; }
-  .cmp-go:active { transform: scale(0.94); }
-  .cmp-go:disabled { opacity: 0.6; cursor: not-allowed; }
-  .cmp .notice { padding: 6px 10px; font-size: 12.5px; }
-  .cmp .notice.err { background: #fff0ed; color: #e0300f; }
-
-  .done { text-align: left; gap: 8px; }
-  .done h2 { margin: 0; font: 800 21px/1.15 var(--display); letter-spacing: -0.02em; }
-  .done h2 span { color: #0000ff; }
-  .done p { margin: 0; font-size: 13px; color: #5b616e; }
-  .done-btns { display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px; }
-  .g-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px; border-radius: 999px; font-weight: 800; font-size: 14px; border: 0; cursor: pointer; }
-  .g-btn .x-logo { fill: currentColor; width: 14px; height: 14px; }
-  .g-btn.ink { background: #0a0b0d; color: #fff; }
-  .g-btn.ink:hover { background: #0000ff; }
-  .g-btn.line { background: #fff; color: #0a0b0d; box-shadow: inset 0 0 0 1px #dee1e7; }
-  .linkish { justify-self: start; border: 0; background: none; color: #5b616e; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 0; }
-
-  /* boutons pleins réutilisés ailleurs (fin de fil, carte d'un token partagé) */
-  .p-go { border: 0; border-radius: 999px; padding: 11px 18px; font: 800 15px/1 var(--text); color: #0000ff; background: #fff; cursor: pointer; }
-  .p-go:hover { background: #ebebff; }
-
-  /* ---------------------------------------------------------------- fils façon reels : une carte par écran, on glisse */
-  .reel { flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; padding: 2px 8px 8px; scrollbar-width: none; overscroll-behavior: contain; }
-  .reel::-webkit-scrollbar { display: none; }
-  .slide { position: relative; height: calc(100% - 26px); margin-bottom: 8px; border-radius: 20px; overflow: hidden; scroll-snap-align: start; scroll-margin-top: 2px; background: #00008a; isolation: isolate; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08); }
-  .reel.single .slide { height: 100%; margin: 0; }
-  .s-media { position: absolute; inset: 0; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-  .s-media > svg, .s-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-  .s-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgb(0 0 0 / 0.25) 0%, transparent 22%, transparent 42%, rgb(0 0 0 / 0.82) 100%); }
-  .s-top { position: absolute; top: 9px; left: 10px; right: 10px; display: flex; gap: 6px; align-items: center; pointer-events: none; }
-  .s-top .chip-test { position: static; margin-left: auto; }
-  .s-side { position: absolute; right: 8px; bottom: 12px; display: grid; gap: 10px; justify-items: center; z-index: 1; }
-  .s-btn { display: grid; justify-items: center; gap: 1px; border: 0; background: none; color: #fff; cursor: pointer; font-size: 11.5px; font-weight: 700; padding: 0; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.5)); }
-  .s-btn svg.i { width: 27px; height: 27px; transition: transform 0.15s; }
-  .s-btn:hover svg.i { transform: scale(1.12); }
-  .s-btn.like.on { color: #fc401f; }
-  .s-btn.like.on svg.i { fill: currentColor; }
-  .s-btn.like.on span { color: #fff; }
-  .s-info { position: absolute; left: 12px; right: 58px; bottom: 12px; color: #fff; display: grid; gap: 4px; pointer-events: none; }
-  .s-info a { pointer-events: auto; }
-  .s-who { display: flex; align-items: center; gap: 7px; font-size: 13px; text-shadow: 0 1px 4px rgb(0 0 0 / 0.5); }
-  .s-who .post-avatar { width: 24px; height: 24px; font-size: 11px; box-shadow: 0 0 0 1.5px #fff; }
-  .s-who .t { color: rgb(255 255 255 / 0.7); }
-  .s-who-link { display: inline-flex; align-items: center; gap: 7px; }
-  .s-who-link:hover b { text-decoration: underline; }
-  .s-sym { font: 800 24px/1.05 var(--display); letter-spacing: -0.02em; text-shadow: 0 2px 10px rgb(0 0 0 / 0.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .s-sym small { font: 600 14px/1 var(--text); color: rgb(255 255 255 / 0.8); letter-spacing: 0; }
-  .s-desc { margin: 0; font-size: 12.5px; color: rgb(255 255 255 / 0.85); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-  .s-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
-  .s-pill { display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.5); backdrop-filter: blur(8px); font-size: 12.5px; font-weight: 700; }
-  .s-pill .up { color: #b6f569; } .s-pill .down { color: #fea8cd; } .s-pill .mute { color: #dbe3f0; }
-  .s-buy { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; background: #fff; color: #0a0b0d; font-size: 12.5px; font-weight: 800; }
-  .s-buy svg.i { width: 15px; height: 15px; }
-  .s-row .pairtag { background: rgb(255 255 255 / 0.14); border-color: transparent; color: #fff; font-size: 11.5px; }
-  .slide .ig-burst { z-index: 2; }
-  .reel-end { height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; color: rgb(255 255 255 / 0.8); scroll-snap-align: start; }
-  .reel-end b { color: #fff; font-size: 17px; }
-  .cta { flex: none; margin: 8px; }
-  .cta .p-go { width: 100%; }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .f-plan { animation: march 1.2s linear infinite; }
-    @keyframes march { to { stroke-dashoffset: -20; } }
-    .s-btn.like.pop svg.i { animation: pop 0.45s cubic-bezier(.2,.9,.2,1); }
-    .slide.enter { animation: rise 0.45s cubic-bezier(.2,.9,.2,1) both; }
-    @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
-  }
-  @media (max-width: 439px) { .hd .brand-txt { display: none; } }
-  @media (max-width: 360px) { .cmp-name { font-size: 17px; } .cmp-go { padding: 9px 14px; } .sky-hint { display: none; } }
-  @media (max-height: 390px) { .cmp-vibe { display: none; } }
-  @media (max-height: 330px) { .cmp-quota { display: none; } .sky-hint { display: none; } }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: rgb(255 255 255 / 0.62); padding: 2px 4px; border-bottom: 1px dashed rgb(255 255 255 / 0.45); }
+  td { padding: 4px 4px; border-bottom: 1px solid rgb(255 255 255 / 0.1); }
+  td.r, th.r { text-align: right; }
+  td a { text-decoration: none; font-weight: 800; }
+  td a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  td.hl { background: #fff; color: #0000ff; }
+  .t-like { border: 0; background: none; color: #fff; font: 700 12.5px "JetBrains Mono", monospace; padding: 0 2px; cursor: pointer; }
+  .t-like.on { color: #fea8cd; }
+  .t-like.pop { animation: tpop 0.3s ease-out; }
+  @keyframes tpop { 50% { transform: scale(1.4); } }
+  .kv { display: grid; grid-template-columns: 82px 1fr; gap: 1px 10px; margin-top: 4px; }
+  .kv dt { color: rgb(255 255 255 / 0.62); }
+  .kv dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .like-big.on { background: #fea8cd; color: #0a0b0d; }
+  @media (max-width: 380px) { .bar .cwd { display: none; } #name { width: 140px; } #description { width: 150px; } }
+  @media (prefers-reduced-motion: reduce) { .cur { animation: none; } }
 </style>
 <script src="/static/app.js" defer></script>
 <script src="/static/embed.js" defer></script>
 </head>
 <body data-compact>
-<header class="hd">
-  <a class="brand" href="/"><span class="brand-mark"></span><span class="brand-txt">XLaunch</span></a>
-  <nav class="seg" id="seg" role="tablist">
-    <button type="button" role="tab" data-pane="launch" aria-selected="true">Launch</button>
-    <button type="button" role="tab" data-pane="trending" aria-selected="false">🔥 Hot</button>
-    <button type="button" role="tab" data-pane="new" aria-selected="false">New</button>
+<header class="bar">
+  <span class="usr" id="who">xlaunch@base</span><span class="cwd" id="cwd">~/launch</span>
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" data-pane="launch" aria-selected="true">launch</button>
+    <button type="button" role="tab" data-pane="trending" aria-selected="false">top</button>
+    <button type="button" role="tab" data-pane="new" aria-selected="false">new</button>
   </nav>
-  <div class="auth" data-auth></div>
+  <button class="login" type="button" id="login" hidden>login</button>
 </header>
 
-<main class="main">
-  <!-- lancement : ta pièce attend sur la rampe, le composer est un post X -->
-  <section class="view" id="vLaunch">
-    <div class="sky" id="sky">
-      <svg id="skySvg" aria-hidden="true"><g id="fOld"></g><path class="f-plan" id="fPlan"/><path class="f-glow" id="fGlow"/><path class="f-live" id="fLive"/><g id="fFx"></g></svg>
-      <span class="pad" aria-hidden="true"></span>
-      <label class="pad-coin" id="padCoin" title="Add a logo (1 MB max)">
-        <span class="e-art" id="prevArt"></span>
-        <span class="pad-cam" id="cam"></span>
-        <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Add a logo">
-      </label>
-      <span class="sky-hint" id="skyHint">Your coin, ready for launch</span>
-      <a class="sky-pin" id="skyPin"></a>
-      <span class="chip-test">Testnet</span>
-    </div>
+<!-- lancement -->
+<section class="scr" id="vLaunch" aria-live="polite">
+  <div class="ln dim" id="intro">XLaunch · Base · gas sponsored</div>
+  <div class="ln dim">fill the command, hit run. no wallet needed.</div>
+  <form class="cmd" id="composer" novalidate>
+    <div class="cl"><span class="pr">$</span> launch "<input id="name" maxlength="32" autocomplete="off" spellcheck="false" placeholder="token name" aria-label="Token name">" <span class="bs">\</span></div>
+    <div class="cl in"><span class="flag">--ticker</span> <input id="symbol" maxlength="10" autocomplete="off" spellcheck="false" placeholder="TICKER" aria-label="Ticker"> <span class="bs">\</span></div>
+    <div class="cl in"><span class="flag">--pair</span> <select id="pair" aria-label="Pair with"><option value="">ETH</option></select> <span class="bs">\</span></div>
+    <div class="cl in"><span class="flag">--vibe</span> "<input id="description" maxlength="280" autocomplete="off" placeholder="optional" aria-label="Description">" <span class="bs">\</span></div>
+    <div class="cl in"><span class="flag">--logo</span> <label class="attach" for="file" id="logoLbl">[ attach ]</label><input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden></div>
+  </form>
+  <div class="runrow" id="runrow"><button class="btn-t" type="submit" form="composer" id="launchBtn">↵ run</button><span class="quota" id="quota">gas is on us</span></div>
+  <div class="out" id="out"></div>
+</section>
 
-    <form class="cmp" id="composer" novalidate>
-      <div class="cmp-top"><span class="cmp-av" id="cmpAv"></span><input class="cmp-name" id="name" maxlength="32" autocomplete="off" placeholder="What are you launching?" aria-label="Token name"></div>
-      <div class="cmp-row">
-        <label class="cmp-tick"><b>$</b><input id="symbol" maxlength="10" autocomplete="off" placeholder="TICKER" aria-label="Ticker"></label>
-        <select class="cmp-pair" id="pair" aria-label="Pair with"><option value="">Pair: ETH</option></select>
-      </div>
-      <input class="cmp-vibe" id="description" maxlength="280" autocomplete="off" placeholder="Add a vibe (optional)" aria-label="Description">
-      <div class="notice" id="msg" role="alert" hidden></div>
-      <div class="cmp-bar">
-        <label class="cmp-ic" for="file" title="Add a logo" id="logoBtn"></label>
-        <span class="cmp-quota" id="quota">Gas is on us</span>
-        <button class="cmp-go" type="submit" id="launchBtn">Launch</button>
-      </div>
-    </form>
+<!-- top / new -->
+<section class="scr" id="vFeed" hidden>
+  <div class="ln"><span class="pr">$</span> <span id="feedCmd">xlaunch top --sort hot --live</span></div>
+  <table id="tbl"></table>
+  <div class="ln dim" id="feedNote" style="margin-top:8px"></div>
+</section>
 
-    <div class="cmp done" id="done" hidden>
-      <h2><span id="doneSym"></span> is live on Base</h2>
-      <p>You earn <span data-fee-share>half</span> of every trading fee. Share it to get it moving.</p>
-      <div class="done-btns">
-        <a class="g-btn ink" id="doneShare"></a>
-        <a class="g-btn line" id="donePage">View token</a>
-      </div>
-      <button class="linkish" type="button" id="doneAgain">Launch another</button>
-    </div>
-  </section>
-
-  <!-- Hot / New -->
-  <section class="view" id="vFeed" hidden>
-    <div class="reel" id="reel"></div>
-  </section>
-
-  <!-- token partagé (?token=…) -->
-  <section class="view" id="vToken" hidden>
-    <div class="reel single" id="tokenReel"></div>
-    <div class="cta"><button class="p-go" type="button" id="tOwn">Launch your own token</button></div>
-  </section>
-</main>
+<!-- token partagé (?token=…) -->
+<section class="scr" id="vToken" hidden>
+  <div class="ln"><span class="pr">$</span> <span id="infoCmd">xlaunch info</span></div>
+  <div id="info"><div class="ln dim">loading…</div></div>
+</section>
 </body>
 </html>
