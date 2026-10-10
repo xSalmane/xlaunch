@@ -2,40 +2,47 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!--META-->
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js" defer></script>
 
 </head>
 <body>
-<header class="top">
-  <div class="shell">
-    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
-    <nav class="nav" aria-label="Navigation">
-      <a href="/">Lancer</a>
-      <a href="/explore">Explorer</a>
-      <a href="/me">Mes gains</a>
-    </nav>
-    <div class="auth" data-auth></div>
-  </div>
-</header>
+<div class="app">
+  <aside class="side-nav" aria-label="Menu">
+    <a class="brand" href="/" aria-label="XLaunch, accueil"><span class="brand-mark"></span><span class="brand-name">XLaunch</span></a>
+    <a class="nav-link" data-nav href="/"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg><span>Accueil</span></a>
+    <a class="nav-link" data-nav href="/explore"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Explorer</span></a>
+    <a class="nav-link" data-nav href="/me"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg><span>Mes gains</span></a>
+    <a class="btn btn-launch" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/></svg><span class="lbl">Lancer un token</span></a>
+    <div class="side-me" data-auth></div>
+  </aside>
 
-<main class="shell">
-  <h1 class="page-title">Page introuvable</h1>
-  <p class="page-sub">Cette adresse ne correspond à aucune page ni à aucun token XLaunch.</p>
-  <p><a class="btn" href="/explore">Explorer les tokens</a></p>
-</main>
+  <main class="column">
+    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a><div data-auth></div></div>
+    <div class="col-head"><div class="col-title"><a class="back" href="/" aria-label="Retour"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg></a><h1>Introuvable</h1></div></div>
+    <div class="feed-empty"><b>Cette page n'existe pas</b>Cette adresse ne correspond à aucune page ni à aucun token XLaunch.<div style="margin-top:14px"><a class="btn" href="/explore">Explorer les tokens</a></div></div>
+  </main>
 
-<footer class="foot">
-  <div class="shell">
-    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
-    <span><a href="/explore">Explorer</a></span>
-  </div>
-</footer>
+  <aside class="side-right" aria-label="Tendances">
+    <div class="side-right-inner">
+      <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Chercher un token, un $ticker, un @créateur" aria-label="Chercher un token"></form>
+      <section class="box"><h2>Tendances</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Voir plus</a></section>
+      <section class="box"><h2>En chiffres</h2><div class="stats-box" data-stats></div></section>
+      <p class="legal">Tokens spéculatifs sur Base : ne mise que ce que tu peux perdre. 100 % de la supply dans une pool Uniswap verrouillée, gas offert.</p>
+    </div>
+  </aside>
+</div>
+<nav class="tabbar" aria-label="Navigation">
+  <a data-nav href="/" aria-label="Accueil"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+  <a data-nav href="/explore" aria-label="Explorer"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
+  <a data-nav href="/me" aria-label="Mes gains"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg></a>
+</nav>
+<a class="fab" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
 </body>
 </html>

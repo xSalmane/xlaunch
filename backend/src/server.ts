@@ -222,7 +222,7 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   if (!(await relayerHasFunds())) return res.status(503).json({ error: "Les lancements sont en pause pour le moment. Réessaie un peu plus tard." });
 
   const slot = launchesRepo.reserve(
-    { xId: s.sub, handle: s.handle, name, symbol, image, description, quote: quote.address, quoteSymbol: quote.symbol, quoteDecimals: quote.decimals },
+    { xId: s.sub, handle: s.handle, name, symbol, image, description, quote: quote.address, quoteSymbol: quote.symbol, quoteDecimals: quote.decimals, avatar: s.avatar },
     config.launchesPerUserPerDay, config.globalLaunchesPerHour
   );
   if (slot === "symbol_taken") return res.status(409).json({ error: `Le ticker $${symbol} existe déjà. Choisis-en un autre.` });

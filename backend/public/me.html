@@ -2,84 +2,97 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!--META-->
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js" defer></script>
 <script src="/static/me.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <div class="shell">
-    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
-    <nav class="nav" aria-label="Navigation">
-      <a href="/">Lancer</a>
-      <a href="/explore">Explorer</a>
-      <a href="/me">Mes gains</a>
-    </nav>
-    <div class="auth" data-auth></div>
-  </div>
-</header>
+<div class="app">
+  <aside class="side-nav" aria-label="Menu">
+    <a class="brand" href="/" aria-label="XLaunch, accueil"><span class="brand-mark"></span><span class="brand-name">XLaunch</span></a>
+    <a class="nav-link" data-nav href="/"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg><span>Accueil</span></a>
+    <a class="nav-link" data-nav href="/explore"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Explorer</span></a>
+    <a class="nav-link" data-nav href="/me"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg><span>Mes gains</span></a>
+    <a class="btn btn-launch" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/></svg><span class="lbl">Lancer un token</span></a>
+    <div class="side-me" data-auth></div>
+  </aside>
 
-<main class="shell">
-  <h1 class="page-title">Mes gains</h1>
-  <p class="page-sub" id="meSub">Les frais de trading de tes tokens, réservés à ton compte X.</p>
+  <main class="column">
+    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a><div data-auth></div></div>
+    <div class="col-head">
+      <div class="col-title"><a class="back" href="/" aria-label="Retour"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg></a><div><h1 id="pTitle">Mes gains</h1><div class="sub" id="pSub"></div></div></div>
+    </div>
 
-  <section class="panel" id="loggedOut" hidden style="max-width:520px">
-    <h2>Connecte ton compte X</h2>
-    <p class="mute" style="margin:0 0 14px">Tes gains sont rattachés à ton compte X. Connecte-toi pour les voir et les récupérer.</p>
-    <button class="btn" id="meLogin"></button>
-  </section>
+    <div class="feed-empty" id="loggedOut" hidden>
+      <b>Connecte ton compte X</b>Tes gains sont rattachés à ton compte X. Connecte-toi pour les voir et les récupérer.
+      <div style="margin-top:16px"><button class="btn ink" type="button" id="meLogin"></button></div>
+    </div>
 
-  <div class="gains" id="loggedIn" hidden>
-    <section class="panel">
-      <h2>Gagné au total</h2>
-      <div class="earned" id="earned">—</div>
-      <p class="mute" style="margin:0">Estimation à partir de tous les trades de tes tokens.</p>
-      <div class="escrow-list" id="escrow"></div>
-      <p class="mute" id="escrowNote" style="margin:0 0 14px"></p>
-      <form class="claim-form" id="claimForm" novalidate>
-        <label class="field"><span>Adresse qui reçoit tes gains</span>
-          <input class="input" id="recipient" placeholder="0x…" autocomplete="off" spellcheck="false">
-          <small>Une adresse sur Base (Coinbase Wallet, MetaMask, Rabby…). Vérifie-la bien : un envoi est définitif.</small>
-        </label>
-        <div class="notice" id="claimMsg" role="alert" hidden></div>
-        <button class="btn" type="submit" id="claimBtn">Récupérer mes gains</button>
-        <p class="mute" style="margin:0;font-size:14px">Le gas est offert. Ensuite, tes gains futurs arrivent directement sur cette adresse.</p>
-      </form>
-    </section>
-    <section class="panel">
-      <h2>Mes tokens</h2>
-      <table class="tlist" id="mine">
-        <thead><tr><th>Token</th><th>Paire</th><th>Volume total</th><th>Tes frais</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="empty" id="mineEmpty" hidden>Tu n'as encore lancé aucun token.<br><a class="btn" href="/">Lancer mon token</a></div>
-    </section>
-  </div>
+    <div id="loggedIn" hidden>
+      <div class="banner" aria-hidden="true"></div>
+      <div class="profile">
+        <div class="profile-row"><span id="pAvatar"></span><a class="btn quiet small" style="margin-top:12px" id="pX" target="_blank" rel="noopener">Profil X</a></div>
+        <h1 id="pName"></h1><div class="mute" id="pHandle"></div>
+        <div class="profile-stats"><span><b id="sEarned">—</b> gagnés</span><span><b id="sTokens">0</b> tokens lancés</span></div>
+      </div>
+      <div class="tabs" role="tablist" style="border-bottom:1px solid var(--line)">
+        <button type="button" role="tab" aria-selected="true" data-tab="gains"><span>Gains</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="tokens"><span>Mes tokens</span></button>
+      </div>
 
-  <section class="panel" id="faucet" hidden style="max-width:640px;margin-bottom:56px">
-    <h2>Actions de test</h2>
-    <p class="mute" style="margin:0 0 12px">Sur le testnet, les actions tokenisées sont remplacées par des actions de test sans valeur. Reçois-en 10 de chaque sur ton wallet pour essayer d'acheter des tokens appariés à une action.</p>
-    <form class="claim-form" id="faucetForm" novalidate>
-      <label class="field"><span>Ton adresse Base Sepolia</span>
-        <input class="input" id="faucetAddr" placeholder="0x…" autocomplete="off" spellcheck="false">
-      </label>
-      <div class="notice" id="faucetMsg" role="status" hidden></div>
-      <button class="btn quiet" type="submit" id="faucetBtn">Recevoir des actions de test</button>
-    </form>
-  </section>
-</main>
+      <section id="tab-gains" class="section" style="border-bottom:0">
+        <div class="mute">Gagné au total, estimation sur tous les trades de tes tokens</div>
+        <div class="earned" id="earned">—</div>
+        <div class="escrow-list" id="escrow" style="margin-top:12px"></div>
+        <p class="mute" id="escrowNote" style="margin:8px 0 16px"></p>
+        <form class="claim-form" id="claimForm" novalidate>
+          <label class="field"><span>Adresse qui reçoit tes gains</span>
+            <input class="input" id="recipient" placeholder="0x…" autocomplete="off" spellcheck="false">
+            <small>Une adresse sur Base (Coinbase Wallet, MetaMask, Rabby…). Vérifie-la bien : un envoi est définitif.</small>
+          </label>
+          <div class="notice" id="claimMsg" role="alert" hidden></div>
+          <button class="btn" type="submit" id="claimBtn">Récupérer mes gains</button>
+          <small class="mute">Le gas est offert. Ensuite, tes gains futurs arrivent directement sur cette adresse.</small>
+        </form>
 
-<footer class="foot">
-  <div class="shell">
-    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
-    <span><a href="/explore">Explorer</a></span>
-  </div>
-</footer>
+        <div id="faucet" hidden style="margin-top:28px;padding-top:16px;border-top:1px solid var(--line)">
+          <h2 style="font-size:18px;margin:0 0 6px">Actions de test</h2>
+          <p class="mute" style="margin:0 0 12px">Sur le testnet, les actions tokenisées sont des actions de test sans valeur. Reçois-en 10 de chaque pour essayer d'acheter des tokens appariés à une action.</p>
+          <form class="claim-form" id="faucetForm" novalidate>
+            <input class="input" id="faucetAddr" placeholder="Ton adresse Base Sepolia (0x…)" autocomplete="off" spellcheck="false" aria-label="Ton adresse Base Sepolia">
+            <div class="notice" id="faucetMsg" role="status" hidden></div>
+            <button class="btn quiet" type="submit" id="faucetBtn">Recevoir des actions de test</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="tab-tokens" hidden>
+        <div id="mine"></div>
+        <div class="feed-empty" id="mineEmpty" hidden><b>Aucun token lancé</b>Ton premier token est à un post de là.<div style="margin-top:14px"><a class="btn" href="/#compose">Lancer mon token</a></div></div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="side-right" aria-label="Tendances">
+    <div class="side-right-inner">
+      <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Chercher un token, un $ticker, un @créateur" aria-label="Chercher un token"></form>
+      <section class="box"><h2>Tendances</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Voir plus</a></section>
+      <section class="box"><h2>En chiffres</h2><div class="stats-box" data-stats></div></section>
+      <p class="legal">Tokens spéculatifs sur Base : ne mise que ce que tu peux perdre. 100 % de la supply dans une pool Uniswap verrouillée, gas offert.</p>
+    </div>
+  </aside>
+</div>
+<nav class="tabbar" aria-label="Navigation">
+  <a data-nav href="/" aria-label="Accueil"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+  <a data-nav href="/explore" aria-label="Explorer"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
+  <a data-nav href="/me" aria-label="Mes gains"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg></a>
+</nav>
+<a class="fab" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// Explorer : recherche, tri, pagination et rafraîchissement automatique
+// Explorer : recherche, tri (nouveaux, tendances, market cap), pagination, rafraîchissement
 document.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
   const PAGE = 30;
@@ -6,11 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let sort = ["new", "volume", "mcap"].includes(params.get("sort")) ? params.get("sort") : "new";
   let q = params.get("q") || "";
   let count = PAGE;
-  let seen = null;
 
   $("q").value = q;
-  const syncButtons = () => document.querySelectorAll("[data-sort]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sort === sort)));
-  syncButtons();
+  const syncTabs = () => document.querySelectorAll("[data-sort]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.sort === sort)));
+  syncTabs();
 
   function syncUrl() {
     const p = new URLSearchParams();
@@ -19,18 +18,16 @@ document.addEventListener("DOMContentLoaded", () => {
     history.replaceState(null, "", location.pathname + (p.size ? "?" + p : ""));
   }
 
-  async function load(highlight = false) {
+  async function load() {
     try {
       const rows = await XL.api(`/api/tokens?sort=${sort}&limit=${count + 1}&q=${encodeURIComponent(q)}`);
       const shown = rows.slice(0, count);
-      $("list").querySelector("tbody").innerHTML = shown.map((t) => XL.tokenRow(t, highlight && seen && !seen.has(t.token))).join("");
-      seen = new Set(shown.map((t) => t.token));
-      $("list").hidden = !shown.length;
+      $("list").innerHTML = shown.map((t, i) => XL.row(t, sort === "new" ? 0 : i + 1)).join("");
       $("more").hidden = rows.length <= count;
       $("empty").hidden = !!shown.length;
       $("empty").innerHTML = q
-        ? `Aucun token ne correspond à « ${XL.fmt.esc(q)} ».`
-        : `Aucun token lancé pour l'instant.<br><a class="btn" href="/">Lancer le premier</a>`;
+        ? `<b>Aucun résultat pour « ${XL.fmt.esc(q)} »</b>Essaie un autre nom, un $ticker, un @créateur ou une paire (USDC, tNVDA…).`
+        : `<b>Aucun token pour l'instant</b>Le premier, c'est peut-être le tien.<div style="margin-top:14px"><a class="btn" href="/#compose">Lancer un token</a></div>`;
     } catch (e) {
       $("empty").hidden = false;
       $("empty").textContent = e.message;
@@ -38,15 +35,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.querySelectorAll("[data-sort]").forEach((b) =>
-    b.addEventListener("click", () => { sort = b.dataset.sort; count = PAGE; seen = null; syncButtons(); syncUrl(); load(); })
+    b.addEventListener("click", () => { sort = b.dataset.sort; count = PAGE; syncTabs(); syncUrl(); load(); })
   );
   let t;
   $("q").addEventListener("input", () => {
     clearTimeout(t);
-    t = setTimeout(() => { q = $("q").value.trim(); count = PAGE; seen = null; syncUrl(); load(); }, 250);
+    t = setTimeout(() => { q = $("q").value.trim(); count = PAGE; syncUrl(); load(); }, 250);
   });
+  $("qform").addEventListener("submit", (e) => { e.preventDefault(); q = $("q").value.trim(); syncUrl(); load(); });
   $("more").addEventListener("click", () => { count += PAGE; load(); });
 
   load();
-  setInterval(() => { if (!document.hidden) load(true); }, 8000);
+  setInterval(() => { if (!document.hidden) load(); }, 8000);
 });

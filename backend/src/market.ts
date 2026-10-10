@@ -37,7 +37,7 @@ export function serialize(r: Row, creatorFeeBps: number) {
   const q = quoteOf(r.quote);
   return {
     token: r.token, pool: r.pool, name: r.name, symbol: r.symbol, image: r.image, description: r.description,
-    creator: r.handle, createdAt: r.created_at, txHash: r.tx_hash,
+    creator: r.handle, creatorAvatar: r.creator_avatar ?? "", createdAt: r.created_at, txHash: r.tx_hash,
     quote: { address: r.quote, symbol: r.quote_symbol, decimals: r.quote_decimals, kind: q?.kind ?? "eth", icon: q?.icon ?? "", usd },
     // en actif de paire
     price, volume24hQuote: r.vol24,
@@ -68,7 +68,16 @@ export function listTokens(o: { sort?: string; q?: string; limit?: number; offse
   else if (o.sort === "volume") views.sort((a, b) => b.volume24hUsd - a.volume24hUsd || b.createdAt - a.createdAt);
   const offset = Math.max(o.offset ?? 0, 0);
   const limit = Math.min(Math.max(o.limit ?? 30, 1), 100);
-  return views.slice(offset, offset + limit);
+  return withSpark(views.slice(offset, offset + limit));
+}
+
+/** mini-graphique : les 24 derniers prix de chaque pool (pour les cartes du fil) */
+const sparkStmt = db.prepare(`SELECT price FROM (SELECT price, block, log_index FROM swaps WHERE pool=? ORDER BY block DESC, log_index DESC LIMIT 24) ORDER BY block, log_index`);
+function withSpark<T extends { pool: string | null; price: number }>(views: T[]) {
+  return views.map((v) => {
+    const pts = v.pool ? (sparkStmt.all(v.pool) as { price: number }[]).map((x) => x.price) : [];
+    return { ...v, spark: pts.length ? pts : [v.price] };
+  });
 }
 
 export function getToken(token: string, creatorFeeBps: number) {

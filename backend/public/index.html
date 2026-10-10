@@ -2,110 +2,95 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!--META-->
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js" defer></script>
 <script src="/static/home.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <div class="shell">
-    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
-    <nav class="nav" aria-label="Navigation">
-      <a href="/">Lancer</a>
-      <a href="/explore">Explorer</a>
-      <a href="/me">Mes gains</a>
-    </nav>
-    <div class="auth" data-auth></div>
-  </div>
-</header>
+<div class="app">
+  <aside class="side-nav" aria-label="Menu">
+    <a class="brand" href="/" aria-label="XLaunch, accueil"><span class="brand-mark"></span><span class="brand-name">XLaunch</span></a>
+    <a class="nav-link" data-nav href="/"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg><span>Accueil</span></a>
+    <a class="nav-link" data-nav href="/explore"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Explorer</span></a>
+    <a class="nav-link" data-nav href="/me"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg><span>Mes gains</span></a>
+    <a class="btn btn-launch" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/></svg><span class="lbl">Lancer un token</span></a>
+    <div class="side-me" data-auth></div>
+  </aside>
 
-<main class="shell">
-  <section class="hero">
-    <div>
-      <h1>Ton token,<br>en un post.</h1>
-      <p class="lede">Choisis un nom, un ticker et ta paire : ETH, USDC ou une action tokenisée. On le déploie sur Base avec sa pool Uniswap. Le gas est pour nous. À chaque trade, tu touches <span data-fee-share>la moitié</span> des frais.</p>
+  <main class="column">
+    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a><div data-auth></div></div>
+    <div class="col-head">
+      <div class="col-title"><h1>Accueil</h1></div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-feed="new"><span>Récents</span></button>
+        <button type="button" role="tab" aria-selected="false" data-feed="volume"><span>Tendances</span></button>
+      </div>
+    </div>
 
-      <form class="composer" id="composer" novalidate>
-        <div class="pair">
-          <label class="field"><span>Nom</span>
-            <input class="input" name="name" id="name" maxlength="32" required autocomplete="off" placeholder="Croissant">
-          </label>
-          <label class="field"><span>Ticker</span>
-            <input class="input ticker-input" name="symbol" id="symbol" maxlength="10" required autocomplete="off" placeholder="CRSNT">
-          </label>
+    <form class="compose" id="compose" novalidate>
+      <div class="coin" id="coin" style="--s:48px;--h:220" aria-hidden="true">$</div>
+      <div class="compose-main">
+        <input class="compose-name" id="name" maxlength="32" placeholder="Quel token tu lances ?" autocomplete="off" aria-label="Nom du token">
+        <div class="compose-row">
+          <label class="ticker-wrap"><b>$</b><input class="ticker-input" id="symbol" maxlength="10" placeholder="TICKER" autocomplete="off" aria-label="Ticker"></label>
+          <button type="button" class="pairtag" id="pairNow" title="Changer la paire">ETH</button>
         </div>
-        <fieldset class="pairs">
-          <legend>Apparier avec</legend>
-          <div id="pairs"><span class="mute" style="font-size:14px">Chargement des paires…</span></div>
-          <small class="mute" id="pairHint" style="font-size:13px"></small>
+        <textarea class="compose-desc" id="description" maxlength="280" rows="1" placeholder="Dis-en plus (optionnel)" aria-label="Description"></textarea>
+        <div class="compose-logo" id="logoPrev" hidden><img id="logoImg" alt="Logo du token"><button type="button" class="btn quiet small" id="logoRm">Retirer</button></div>
+        <fieldset class="pairs" id="pairBox" hidden>
+          <legend>Apparier avec : les acheteurs paieront dans cet actif, et tes frais arriveront dedans.</legend>
+          <div id="pairs"><span class="mute">Chargement des paires…</span></div>
+          <small class="compose-hint" id="pairHint"></small>
         </fieldset>
-        <label class="field"><span>Description <small>(optionnelle)</small></span>
-          <textarea class="input" name="description" id="description" maxlength="280" placeholder="En une phrase, pourquoi ce token ?"></textarea>
-        </label>
-        <div class="upload">
-          <label class="btn quiet small" for="file">Ajouter un logo</label>
-          <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp">
-          <span class="mute" id="fileInfo" style="font-size:14px">PNG, JPG, GIF ou WebP, 1 Mo max.</span>
-        </div>
         <div class="notice" id="formMsg" role="alert" hidden></div>
-        <div class="composer-foot">
-          <button class="btn" type="submit" id="launchBtn">Lancer sur Base</button>
-          <span class="mute" id="quota">Connexion X requise. Gas offert.</span>
+        <div class="compose-bar">
+          <label class="icon-btn" title="Ajouter un logo"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Ajouter un logo"></label>
+          <button type="button" class="icon-btn" id="pairToggle" title="Choisir la paire" aria-expanded="false" aria-controls="pairBox"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg></button>
+          <span class="grow compose-hint" id="quota"></span>
+          <span class="compose-hint" id="chars"></span>
+          <button class="btn" type="submit" id="launchBtn">Lancer</button>
         </div>
-      </form>
+      </div>
+    </form>
 
-      <div class="composer done-panel" id="done" hidden>
-        <h2 id="doneTitle">C'est lancé.</h2>
-        <p class="mute" style="margin:0">Ton token est en ligne et déjà échangeable. Partage-le pour attirer les premiers acheteurs : chaque trade te rapporte des frais.</p>
-        <div class="done-actions">
+    <div class="compose" id="done" hidden>
+      <span id="doneCoin"></span>
+      <div class="compose-main">
+        <div style="font-size:21px;font-weight:800" id="doneTitle"></div>
+        <div class="mute">Ton token est en ligne et déjà échangeable. Partage-le : chaque trade te rapporte <span data-fee-share>la moitié</span> des frais.</div>
+        <div class="compose-row">
           <a class="btn" id="doneShare" target="_blank" rel="noopener"></a>
-          <a class="btn quiet" id="donePage">Voir la page du token</a>
-          <button class="btn quiet" type="button" id="doneAgain">Lancer un autre token</button>
+          <a class="btn quiet" id="donePage">Voir le token</a>
+          <button class="btn quiet" type="button" id="doneAgain">Lancer un autre</button>
         </div>
       </div>
     </div>
 
-    <div class="stage" aria-live="polite">
-      <div class="coin big-coin" id="bigCoin" style="--h:220"><span class="sym" id="coinSym"><small>$</small>TICKER</span></div>
-      <div class="stage-name" id="stageName">Ton token</div>
-      <div class="stage-meta">1 milliard d'unités, 100 % dans la pool<span id="stagePair"></span></div>
+    <div id="feed" aria-live="polite"></div>
+    <div class="feed-empty" id="feedEmpty" hidden><b>Aucun token pour l'instant</b>Le premier, c'est peut-être le tien.</div>
+    <div class="more"><button class="btn quiet" type="button" id="more" hidden>Afficher plus</button></div>
+  </main>
+
+  <aside class="side-right" aria-label="Tendances">
+    <div class="side-right-inner">
+      <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Chercher un token, un $ticker, un @créateur" aria-label="Chercher un token"></form>
+      <section class="box"><h2>Tendances</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Voir plus</a></section>
+      <section class="box"><h2>En chiffres</h2><div class="stats-box" data-stats></div></section>
+      <p class="legal">Tokens spéculatifs sur Base : ne mise que ce que tu peux perdre. 100 % de la supply dans une pool Uniswap verrouillée, gas offert.</p>
     </div>
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <h2>Lancés à l'instant</h2>
-      <div class="stats-line" id="stats"></div>
-    </div>
-    <table class="tlist" id="live">
-      <thead><tr><th>Token</th><th class="hide-sm">Paire</th><th>Market cap</th><th class="hide-sm">Volume 24 h</th><th>24 h</th><th class="hide-sm">Lancé</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="empty" id="liveEmpty" hidden>Aucun token pour l'instant. Le premier, c'est peut-être le tien.</div>
-    <div class="more"><a class="btn quiet" href="/explore">Voir tous les tokens</a></div>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><h2>Comment ça marche</h2></div>
-    <ol class="steps">
-      <li><h3>Connecte ton compte X</h3><p>Pas de wallet à brancher. Ton compte X sert d'identité et garde tes gains de côté.</p></li>
-      <li><h3>Nomme ton token</h3><p>On le déploie sur Base avec toute la supply dans une pool Uniswap verrouillée. Personne ne reçoit de tokens au départ, toi compris.</p></li>
-      <li><h3>Partage et touche les frais</h3><p>Chaque achat ou vente paie 1 % de frais, dont <span data-fee-share>la moitié</span> pour toi. Récupère-les quand tu veux, sans payer de gas.</p></li>
-    </ol>
-  </section>
-</main>
-
-<footer class="foot">
-  <div class="shell">
-    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
-    <span><a href="/explore">Explorer</a></span>
-  </div>
-</footer>
+  </aside>
+</div>
+<nav class="tabbar" aria-label="Navigation">
+  <a data-nav href="/" aria-label="Accueil"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+  <a data-nav href="/explore" aria-label="Explorer"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
+  <a data-nav href="/me" aria-label="Mes gains"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg></a>
+</nav>
+<a class="fab" href="/#compose" aria-label="Lancer un token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
 </body>
 </html>

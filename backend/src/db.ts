@@ -57,12 +57,17 @@ CREATE TABLE IF NOT EXISTS claims (
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 `);
 
+// migrations douces (bases déjà créées par une version précédente)
+for (const sql of [`ALTER TABLE launches ADD COLUMN creator_avatar TEXT NOT NULL DEFAULT ''`]) {
+  try { db.exec(sql); } catch { /* colonne déjà présente */ }
+}
+
 export const now = () => Math.floor(Date.now() / 1000);
 
 export type LaunchRow = {
   id: number; x_id: string; handle: string; name: string; symbol: string; image: string; description: string;
   status: string; token: string | null; pool: string | null; tx_hash: string | null; launch_block: number | null;
-  quote: string; quote_symbol: string; quote_decimals: number; token_is0: number;
+  quote: string; quote_symbol: string; quote_decimals: number; token_is0: number; creator_avatar: string;
   init_price: number | null; error: string | null; created_at: number;
 };
 
@@ -95,7 +100,7 @@ export const launchesRepo = {
   /** réserve un slot de façon atomique (évite le double-clic / requêtes parallèles) */
   reserve(
     p: { xId: string; handle: string; name: string; symbol: string; image: string; description: string;
-      quote: string; quoteSymbol: string; quoteDecimals: number },
+      quote: string; quoteSymbol: string; quoteDecimals: number; avatar?: string },
     perDay: number, perHour: number,
   ): number | "user_limit" | "global_limit" | "pending" | "symbol_taken" {
     const tx = db.transaction(() => {
@@ -104,9 +109,9 @@ export const launchesRepo = {
       if (launchesRepo.countUserLast24h(p.xId) >= perDay) return "user_limit" as const;
       if (launchesRepo.countGlobalLastHour() >= perHour) return "global_limit" as const;
       const r = db
-        .prepare(`INSERT INTO launches (x_id, handle, name, symbol, image, description, quote, quote_symbol, quote_decimals, created_at)
-          VALUES (?,?,?,?,?,?,?,?,?,?)`)
-        .run(p.xId, p.handle, p.name, p.symbol, p.image, p.description, p.quote.toLowerCase(), p.quoteSymbol, p.quoteDecimals, now());
+        .prepare(`INSERT INTO launches (x_id, handle, name, symbol, image, description, quote, quote_symbol, quote_decimals, creator_avatar, created_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(p.xId, p.handle, p.name, p.symbol, p.image, p.description, p.quote.toLowerCase(), p.quoteSymbol, p.quoteDecimals, p.avatar ?? "", now());
       return Number(r.lastInsertRowid);
     });
     return tx.immediate();
