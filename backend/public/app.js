@@ -74,9 +74,29 @@
     if (v < 0.001) return "< 0,001 ETH";
     return nf(v < 1 ? digits : 2).format(v) + " ETH";
   }
+  /** montants en dollars : 12,4 k$, 3,2 M$, 0,85 $ */
+  const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
+  function usd(v) {
+    if (!v) return "0 $";
+    if (v < 0.01) return "< 0,01 $";
+    if (v < 1000) return nf(v < 10 ? 2 : 0).format(v) + " $";
+    return compact.format(v).replace(/\s?k$/, " k").replace(/\s?M$/, " M").replace(/\s?Md$/, " Md") + "$";
+  }
+  /** quantité d'un actif : 1 234,5 USDC, 0,0042 ETH, 3,1 tNVDA */
+  function amount(v, symbol) {
+    const d = v >= 100 ? 0 : v >= 1 ? 2 : 4;
+    return (v && v < 0.0001 ? "< 0,0001" : nf(d).format(v)) + " " + symbol;
+  }
+  /** pastille de la paire (ETH, USDC, action) */
+  function pair(q, cls = "") {
+    if (!q) return "";
+    const icon = q.icon ? `<img src="${esc(q.icon)}" alt="" referrerpolicy="no-referrer">` : "";
+    return `<span class="pairtag ${cls} pairtag-${esc(q.kind)}">${icon}${esc(q.symbol)}</span>`;
+  }
   /** très petits prix : 0,0₈3412 (zéros comptés en indice) */
   function price(v) {
     if (!v) return "0";
+    if (v >= 1) return nf(2).format(v);
     if (v >= 0.001) return nf(6).format(v);
     const s = v.toExponential(3); // ex 3.412e-9
     const [m, e] = s.split("e");
@@ -159,8 +179,9 @@
     return `<tr class="row${isNew ? " new-row" : ""}" data-href="/t/${esc(t.token)}">
       <td><div class="tcell">${coin(t, 38)}<div><a class="tname" href="/t/${esc(t.token)}">$${esc(t.symbol)} <span class="mute">${esc(t.name)}</span></a>
         <div class="tsub">par @${esc(t.creator)}</div></div></div></td>
-      <td>${eth(t.mcap, 2)}</td>
-      <td class="hide-sm">${eth(t.volume24h)}</td>
+      <td class="hide-sm">${pair(t.quote)}</td>
+      <td>${usd(t.mcapUsd)}</td>
+      <td class="hide-sm">${usd(t.volume24hUsd)}</td>
       <td>${pct(t.change24h)}</td>
       <td class="hide-sm mute">${ago(t.createdAt)}</td>
     </tr>`;
@@ -181,11 +202,39 @@
     } catch { return null; }
   }
 
+  /**
+   * Sélecteur de paire (ETH, USDC, actions tokenisées). Remplit `el` et renvoie une fonction
+   * qui donne l'actif choisi. `onChange` est appelé à chaque choix.
+   */
+  async function pairPicker(el, onChange = () => {}) {
+    let quotes = [];
+    try { quotes = await api("/api/quotes"); } catch { el.innerHTML = `<span class="mute">Paires indisponibles, ETH sera utilisé.</span>`; }
+    const groups = [
+      ["Crypto", quotes.filter((q) => q.kind !== "stock")],
+      ["Actions tokenisées", quotes.filter((q) => q.kind === "stock")],
+    ].filter(([, list]) => list.length);
+    el.innerHTML = groups.map(([label, list]) => `
+      <div class="pair-group">${label}</div>
+      <div class="pair-grid" role="radiogroup" aria-label="${label}">
+        ${list.map((q) => `<label class="pair-opt" title="${esc(q.name)}${q.paused ? " — suspendu par l'émetteur" : ""}">
+          <input type="radio" name="quote" value="${esc(q.address)}" ${q.symbol === "ETH" ? "checked" : ""} ${q.paused ? "disabled" : ""}>
+          <span>${q.icon ? `<img src="${esc(q.icon)}" alt="" referrerpolicy="no-referrer">` : ""}${esc(q.symbol)}</span>
+        </label>`).join("")}
+      </div>`).join("");
+    const current = () => {
+      const v = el.querySelector("input[name=quote]:checked")?.value;
+      return quotes.find((q) => q.address === v) ?? quotes[0] ?? null;
+    };
+    el.addEventListener("change", () => onChange(current()));
+    onChange(current());
+    return current;
+  }
+
   window.XL = {
-    tokenRow, feeShare,
+    tokenRow, feeShare, pairPicker,
     api, login, logout, refreshMe, onAuth: (fn) => { listeners.add(fn); fn(me); }, get me() { return me; },
     isLogged: () => !!store.get(),
-    fmt: { eth, price, pct, ago, short, esc }, coin, toast, copy, tweetUrl, X_SVG,
+    fmt: { eth, usd, amount, price, pct, ago, short, esc }, coin, pair, toast, copy, tweetUrl, X_SVG,
   };
 
   // bandeau visible tant que le site tourne sur le testnet

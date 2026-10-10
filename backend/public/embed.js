@@ -4,6 +4,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const { api, fmt } = XL;
   let imageUrl = "";
 
+  // paire : menu déroulant compact (ETH, USDC, actions tokenisées)
+  api("/api/quotes").then((quotes) => {
+    const opt = (q) => `<option value="${fmt.esc(q.address)}" ${q.symbol === "ETH" ? "selected" : ""} ${q.paused ? "disabled" : ""}>${fmt.esc(q.symbol)} — ${fmt.esc(q.name)}</option>`;
+    const crypto = quotes.filter((q) => q.kind !== "stock"), stocks = quotes.filter((q) => q.kind === "stock");
+    $("pair").innerHTML = `<optgroup label="Crypto">${crypto.map(opt).join("")}</optgroup>` +
+      (stocks.length ? `<optgroup label="Actions tokenisées">${stocks.map(opt).join("")}</optgroup>` : "");
+  }).catch(() => {});
+
   const showMsg = (t, kind = "err") => { const m = $("msg"); m.hidden = !t; if (t) { m.className = "notice " + kind; m.textContent = t; } };
   const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 195 + (h % 70); };
 
@@ -56,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = $("launchBtn");
     btn.disabled = true; btn.textContent = "Déploiement sur Base…";
     try {
-      const r = await api("/api/launch", { method: "POST", body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim() }) });
+      const r = await api("/api/launch", { method: "POST", body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim(), quote: $("pair").value }) });
       $("composer").hidden = true; $("done").hidden = false;
       $("done").scrollIntoView({ block: "start", behavior: "smooth" });
       $("doneTitle").textContent = `$${symbol} est en ligne.`;
@@ -73,8 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const rows = await api("/api/tokens?sort=new&limit=5");
       $("recent").innerHTML = rows.length
         ? rows.map((t) => `<a href="/t/${fmt.esc(t.token)}" target="_blank" rel="noopener">${XL.coin(t, 30)}
-            <span><b>$${fmt.esc(t.symbol)}</b> <span class="mute">@${fmt.esc(t.creator)}</span></span>
-            <span class="r">${fmt.eth(t.mcap, 2)}<br>${fmt.pct(t.change24h)}</span></a>`).join("")
+            <span><b>$${fmt.esc(t.symbol)}</b> ${XL.pair(t.quote)}<br><span class="mute">@${fmt.esc(t.creator)}</span></span>
+            <span class="r">${fmt.usd(t.mcapUsd)}<br>${fmt.pct(t.change24h)}</span></a>`).join("")
         : `<span class="mute">Aucun token pour l'instant.</span>`;
     } catch {}
   }
@@ -86,10 +94,11 @@ document.addEventListener("DOMContentLoaded", () => {
       $("tokenCard").hidden = false; $("composer").hidden = true; $("recentCard").hidden = true;
       $("tCoin").innerHTML = XL.coin(t, 52);
       $("tTitle").textContent = `$${t.symbol}`;
-      $("tBy").textContent = `${t.name}, par @${t.creator}`;
-      $("tMcap").textContent = fmt.eth(t.mcap, 2);
+      $("tBy").innerHTML = `${fmt.esc(t.name)}, par @${fmt.esc(t.creator)} ${XL.pair(t.quote)}`;
+      $("tMcap").textContent = fmt.usd(t.mcapUsd);
       $("tChange").innerHTML = fmt.pct(t.change24h);
       $("tBuy").href = t.trade;
+      $("tBuy").textContent = `Acheter avec ${t.quote.symbol}`;
       $("tOpen").href = "/t/" + t.token;
     }).catch(() => {});
     $("tOwn").onclick = () => { $("tokenCard").hidden = true; $("composer").hidden = false; $("recentCard").hidden = false; };

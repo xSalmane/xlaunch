@@ -33,7 +33,7 @@
       <div class="meta" id="tMeta"></div>
     </div>
     <div class="actions">
-      <a class="btn" id="tBuy" target="_blank" rel="noopener">Acheter sur Uniswap</a>
+      <a class="btn" id="tBuy" target="_blank" rel="noopener">Acheter</a>
       <a class="btn quiet" id="tShare" target="_blank" rel="noopener"></a>
     </div>
   </div>
@@ -49,13 +49,13 @@
   <div class="tgrid">
     <div>
       <section class="panel">
-        <div class="chart-head"><h2 style="margin:0">Prix en ETH</h2><span class="mute" id="chartRange" style="font-size:14px"></span></div>
+        <div class="chart-head"><h2 style="margin:0" id="chartTitle">Prix</h2><span class="mute" id="chartRange" style="font-size:14px"></span></div>
         <div class="chart" id="chart" role="img" aria-label="Graphique du prix"></div>
       </section>
       <section class="panel">
         <h2>Derniers trades</h2>
         <table class="trades" id="trades">
-          <thead><tr><th>Type</th><th>ETH</th><th>Tokens</th><th class="hide-sm">Trader</th><th>Quand</th></tr></thead>
+          <thead><tr><th>Type</th><th>Montant</th><th>Tokens</th><th class="hide-sm">Trader</th><th>Quand</th></tr></thead>
           <tbody></tbody>
         </table>
         <p class="mute" id="noTrades" hidden style="margin:8px 0 0">Aucun trade pour l'instant. Le premier acheteur obtient le prix de départ.</p>
@@ -66,6 +66,7 @@
         <h2>À propos</h2>
         <p class="desc" id="tDesc" hidden></p>
         <dl class="facts">
+          <div><dt>Paire</dt><dd id="tPair"></dd></div>
           <div><dt>Contrat</dt><dd><button class="copy" id="tAddr"></button></dd></div>
           <div><dt>Pool</dt><dd><a id="tPool" target="_blank" rel="noopener"></a></dd></div>
           <div><dt>Supply</dt><dd>1 000 000 000</dd></div>

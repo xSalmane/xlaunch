@@ -16,11 +16,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function load() {
     const c = await api("/api/creator");
-    $("earned").textContent = fmt.eth(c.earnedTotal, 4);
+    $("earned").textContent = fmt.usd(c.earnedTotalUsd);
     const pending = c.escrow.filter((e) => e.amount !== "0");
     $("escrow").innerHTML = pending.map((e) => {
-      const v = Number(BigInt(e.amount)) / 1e18;
-      return `<div><span>En attente</span><b>${e.symbol === "ETH" ? fmt.eth(v, 5) : new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(v) + " " + fmt.esc(e.symbol)}</b></div>`;
+      const v = Number(BigInt(e.amount)) / 10 ** e.decimals;
+      return `<div><span>En attente</span><b>${fmt.esc(fmt.amount(v, e.symbol))} <span class="mute" style="font-weight:500">(${fmt.usd(e.usd)})</span></b></div>`;
     }).join("");
     $("escrowNote").textContent = c.boundWallet
       ? `Tes gains sont versés sur ${fmt.short(c.boundWallet)}. Les frais s'accumulent dans la pool et partent sur cette adresse à chaque récupération.`
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("mine").querySelector("tbody").innerHTML = c.tokens.map((t) => `
       <tr class="row" data-href="/t/${fmt.esc(t.token)}">
         <td><div class="tcell">${XL.coin(t, 34)}<a class="tname" href="/t/${fmt.esc(t.token)}">$${fmt.esc(t.symbol)} <span class="mute">${fmt.esc(t.name)}</span></a></div></td>
-        <td>${fmt.eth(t.volumeTotal)}</td><td>${fmt.eth(t.creatorFeesEarned, 4)}</td>
+        <td>${XL.pair(t.quote)}</td><td>${fmt.usd(t.volumeTotalUsd)}</td><td>${fmt.usd(t.creatorFeesUsd)}</td>
       </tr>`).join("");
     $("mine").hidden = !c.tokens.length;
     $("mineEmpty").hidden = !!c.tokens.length;
@@ -83,4 +83,24 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   setInterval(() => { if (!document.hidden && loaded) load().catch(() => {}); }, 10000);
+
+  // ------------------------------------------------------------ robinet d'actions de test (testnet)
+  api("/api/config").then((c) => {
+    if (!c.testFaucet) return;
+    $("faucet").hidden = false;
+    $("faucetForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const address = $("faucetAddr").value.trim();
+      const m = $("faucetMsg");
+      const show = (t, k) => { m.className = "notice " + k; m.textContent = t; m.hidden = false; };
+      if (!ADDR.test(address)) return show("Cette adresse n'est pas valide : elle doit commencer par 0x et faire 42 caractères.", "err");
+      if (!XL.me) { try { await XL.login(); } catch { return; } }
+      $("faucetBtn").disabled = true; show("Envoi en cours, environ 30 secondes…", "info");
+      try {
+        const r = await api("/api/test-faucet", { method: "POST", body: JSON.stringify({ address }) });
+        show(`Envoyé : 10 ${r.sent.join(", 10 ")}.`, "ok");
+      } catch (err) { show(err.message, "err"); }
+      $("faucetBtn").disabled = false;
+    });
+  }).catch(() => {});
 });

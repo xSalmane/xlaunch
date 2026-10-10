@@ -29,7 +29,7 @@
   <section class="hero">
     <div>
       <h1>Ton token,<br>en un post.</h1>
-      <p class="lede">Choisis un nom et un ticker, on le déploie sur Base avec sa pool Uniswap. Le gas est pour nous. À chaque trade, tu touches <span data-fee-share>la moitié</span> des frais.</p>
+      <p class="lede">Choisis un nom, un ticker et ta paire : ETH, USDC ou une action tokenisée. On le déploie sur Base avec sa pool Uniswap. Le gas est pour nous. À chaque trade, tu touches <span data-fee-share>la moitié</span> des frais.</p>
 
       <form class="composer" id="composer" novalidate>
         <div class="pair">
@@ -40,6 +40,11 @@
             <input class="input ticker-input" name="symbol" id="symbol" maxlength="10" required autocomplete="off" placeholder="CRSNT">
           </label>
         </div>
+        <fieldset class="pairs">
+          <legend>Apparier avec</legend>
+          <div id="pairs"><span class="mute" style="font-size:14px">Chargement des paires…</span></div>
+          <small class="mute" id="pairHint" style="font-size:13px"></small>
+        </fieldset>
         <label class="field"><span>Description <small>(optionnelle)</small></span>
           <textarea class="input" name="description" id="description" maxlength="280" placeholder="En une phrase, pourquoi ce token ?"></textarea>
         </label>
@@ -69,7 +74,7 @@
     <div class="stage" aria-live="polite">
       <div class="coin big-coin" id="bigCoin" style="--h:220"><span class="sym" id="coinSym"><small>$</small>TICKER</span></div>
       <div class="stage-name" id="stageName">Ton token</div>
-      <div class="stage-meta">1 milliard d'unités, 100 % dans la pool</div>
+      <div class="stage-meta">1 milliard d'unités, 100 % dans la pool<span id="stagePair"></span></div>
     </div>
   </section>
 
@@ -79,7 +84,7 @@
       <div class="stats-line" id="stats"></div>
     </div>
     <table class="tlist" id="live">
-      <thead><tr><th>Token</th><th>Market cap</th><th class="hide-sm">Volume 24 h</th><th>24 h</th><th class="hide-sm">Lancé</th></tr></thead>
+      <thead><tr><th>Token</th><th class="hide-sm">Paire</th><th>Market cap</th><th class="hide-sm">Volume 24 h</th><th>24 h</th><th class="hide-sm">Lancé</th></tr></thead>
       <tbody></tbody>
     </table>
     <div class="empty" id="liveEmpty" hidden>Aucun token pour l'instant. Le premier, c'est peut-être le tien.</div>

@@ -127,6 +127,11 @@ export const factoryAbi = [
   },
   {
     "inputs": [],
+    "name": "QuoteNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ReentrancyGuardReentrantCall",
     "type": "error"
   },
@@ -150,11 +155,6 @@ export const factoryAbi = [
       }
     ],
     "name": "StringTooLong",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "TokenNotBelowWeth",
     "type": "error"
   },
   {
@@ -266,7 +266,7 @@ export const factoryAbi = [
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "wethAmount",
+        "name": "quoteAmount",
         "type": "uint256"
       }
     ],
@@ -315,6 +315,25 @@ export const factoryAbi = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
+    ],
+    "name": "QuoteSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "relayer",
@@ -340,6 +359,12 @@ export const factoryAbi = [
         "type": "bytes32"
       },
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "quote",
+        "type": "address"
+      },
+      {
         "indexed": false,
         "internalType": "address",
         "name": "pool",
@@ -350,6 +375,12 @@ export const factoryAbi = [
         "internalType": "uint256",
         "name": "positionId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "tokenIsToken0",
+        "type": "bool"
       },
       {
         "indexed": false,
@@ -566,7 +597,7 @@ export const factoryAbi = [
       },
       {
         "internalType": "uint256",
-        "name": "amountWeth",
+        "name": "amountQuote",
         "type": "uint256"
       }
     ],
@@ -682,6 +713,19 @@ export const factoryAbi = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "flushTreasury",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "string",
         "name": "name",
         "type": "string"
@@ -707,13 +751,18 @@ export const factoryAbi = [
         "type": "bytes32"
       },
       {
+        "internalType": "address",
+        "name": "quote",
+        "type": "address"
+      },
+      {
         "internalType": "uint160",
         "name": "sqrtPriceX96",
         "type": "uint160"
       },
       {
         "internalType": "int24",
-        "name": "tickLower",
+        "name": "tickBound",
         "type": "int24"
       }
     ],
@@ -757,6 +806,16 @@ export const factoryAbi = [
         "internalType": "address",
         "name": "pool",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "quote",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "tokenIsToken0",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -855,6 +914,25 @@ export const factoryAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "quoteAllowed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "relayer",
     "outputs": [
@@ -883,6 +961,42 @@ export const factoryAbi = [
       }
     ],
     "name": "setAttester",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
+    ],
+    "name": "setQuote",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "assets",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "allowed",
+        "type": "bool"
+      }
+    ],
+    "name": "setQuotes",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -974,6 +1088,25 @@ export const factoryAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "treasuryOwed",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "weth",
     "outputs": [
@@ -987,3 +1120,7 @@ export const factoryAbi = [
     "type": "function"
   }
 ] as const;
+
+// actif de test (testnet / local uniquement)
+export const mockAssetAbi = [{"inputs":[{"internalType":"string","name":"name_","type":"string"},{"internalType":"string","name":"symbol_","type":"string"},{"internalType":"uint8","name":"decimals_","type":"uint8"},{"internalType":"address","name":"minter_","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"allowance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientAllowance","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"uint256","name":"balance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientBalance","type":"error"},{"inputs":[{"internalType":"address","name":"approver","type":"address"}],"name":"ERC20InvalidApprover","type":"error"},{"inputs":[{"internalType":"address","name":"receiver","type":"address"}],"name":"ERC20InvalidReceiver","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"}],"name":"ERC20InvalidSender","type":"error"},{"inputs":[{"internalType":"address","name":"spender","type":"address"}],"name":"ERC20InvalidSpender","type":"error"},{"inputs":[],"name":"NotMinter","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minter","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}] as const;
+export const mockAssetBytecode = "0x60c06040523461035b57610b29803803806100198161035f565b92833981019060808183031261035b5780516001600160401b03811161035b5782610045918301610384565b602082015190926001600160401b03821161035b57610065918301610384565b9060408101519060ff8216820361035b57606001516001600160a01b038116810361035b5783516001600160401b03811161026c57600354600181811c91168015610351575b602082101461024e57601f81116102ee575b50602094601f821160011461028b579481929394955f92610280575b50508160011b915f199060031b1c1916176003555b82516001600160401b03811161026c57600454600181811c91168015610262575b602082101461024e57601f81116101eb575b506020601f821160011461018857819293945f9261017d575b50508160011b915f199060031b1c1916176004555b60805260a05260405161075390816103d6823960805181818161028b015261051f015260a051816103680152f35b015190505f8061013a565b601f1982169060045f52805f20915f5b8181106101d3575095836001959697106101bb575b505050811b0160045561014f565b01515f1960f88460031b161c191690555f80806101ad565b9192602060018192868b015181550194019201610198565b60045f527f8a35acfbc15ff81a39ae7d344fd709f28e8600b4aa8c65c6b64bfe7fe36bd19b601f830160051c81019160208410610244575b601f0160051c01905b8181106102395750610121565b5f815560010161022c565b9091508190610223565b634e487b7160e01b5f52602260045260245ffd5b90607f169061010f565b634e487b7160e01b5f52604160045260245ffd5b015190505f806100d9565b601f1982169560035f52805f20915f5b8881106102d6575083600195969798106102be575b505050811b016003556100ee565b01515f1960f88460031b161c191690555f80806102b0565b9192602060018192868501518155019401920161029b565b60035f527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b601f830160051c81019160208410610347575b601f0160051c01905b81811061033c57506100bd565b5f815560010161032f565b9091508190610326565b90607f16906100ab565b5f80fd5b6040519190601f01601f191682016001600160401b0381118382101761026c57604052565b81601f8201121561035b578051906001600160401b03821161026c576103b3601f8301601f191660200161035f565b928284526020838301011161035b57815f9260208093018386015e830101529056fe6080806040526004361015610012575f80fd5b5f3560e01c90816306fdde031461054e57508063075461721461050a578063095ea7b31461048857806318160ddd1461046b57806323b872dd1461038c578063313ce5671461034f57806340c10f191461026c57806370a082311461023557806395d89b411461011a578063a9059cbb146100e95763dd62ed3e14610095575f80fd5b346100e55760403660031901126100e5576100ae610647565b6100b661065d565b6001600160a01b039182165f908152600160209081526040808320949093168252928352819020549051908152f35b5f80fd5b346100e55760403660031901126100e55761010f610105610647565b6024359033610673565b602060405160018152f35b346100e5575f3660031901126100e5576040515f6004548060011c9060018116801561022b575b602083108114610217578285529081156101fb57506001146101a6575b50819003601f01601f191681019067ffffffffffffffff8211818310176101925761018e8291826040528261061d565b0390f35b634e487b7160e01b5f52604160045260245ffd5b905060045f527f8a35acfbc15ff81a39ae7d344fd709f28e8600b4aa8c65c6b64bfe7fe36bd19b5f905b8282106101e55750602091508201018261015e565b60018160209254838588010152019101906101d0565b90506020925060ff191682840152151560051b8201018261015e565b634e487b7160e01b5f52602260045260245ffd5b91607f1691610141565b346100e55760203660031901126100e5576001600160a01b03610256610647565b165f525f602052602060405f2054604051908152f35b346100e55760403660031901126100e557610285610647565b602435907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03163303610340576001600160a01b031690811561032d57600254908082018092116103195760207fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef915f9360025584845283825260408420818154019055604051908152a3005b634e487b7160e01b5f52601160045260245ffd5b63ec442f0560e01b5f525f60045260245ffd5b633e34a41b60e21b5f5260045ffd5b346100e5575f3660031901126100e557602060405160ff7f0000000000000000000000000000000000000000000000000000000000000000168152f35b346100e55760603660031901126100e5576103a5610647565b6103ad61065d565b6001600160a01b0382165f818152600160209081526040808320338452909152902054909260443592915f1981106103eb575b5061010f9350610673565b83811061045057841561043d57331561042a5761010f945f52600160205260405f2060018060a01b0333165f526020528360405f2091039055846103e0565b634a1406b160e11b5f525f60045260245ffd5b63e602df0560e01b5f525f60045260245ffd5b8390637dc7a0d960e11b5f523360045260245260445260645ffd5b346100e5575f3660031901126100e5576020600254604051908152f35b346100e55760403660031901126100e5576104a1610647565b60243590331561043d576001600160a01b031690811561042a57335f52600160205260405f20825f526020528060405f20556040519081527f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92560203392a3602060405160018152f35b346100e5575f3660031901126100e5576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346100e5575f3660031901126100e5575f6003548060011c90600181168015610613575b602083108114610217578285529081156101fb57506001146105be5750819003601f01601f191681019067ffffffffffffffff8211818310176101925761018e8291826040528261061d565b905060035f527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b5f905b8282106105fd5750602091508201018261015e565b60018160209254838588010152019101906105e8565b91607f1691610572565b602060409281835280519182918282860152018484015e5f828201840152601f01601f1916010190565b600435906001600160a01b03821682036100e557565b602435906001600160a01b03821682036100e557565b6001600160a01b031690811561070a576001600160a01b031691821561032d57815f525f60205260405f20548181106106f157817fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92602092855f525f84520360405f2055845f525f825260405f20818154019055604051908152a3565b8263391434e360e21b5f5260045260245260445260645ffd5b634b637e8f60e11b5f525f60045260245ffdfea2646970667358221220462e17378f342a737ec8b8d405da3f0b395575959cc250dae5f60073ff73b4db64736f6c634300081a0033" as const;

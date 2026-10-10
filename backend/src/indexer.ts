@@ -16,7 +16,10 @@ const POOLS_PER_QUERY = 100;
 const INTERVAL_MS = Number(process.env.INDEXER_INTERVAL_MS ?? 3000);
 
 const insert = db.prepare(`INSERT OR IGNORE INTO swaps
-  (pool, tx_hash, log_index, block, ts, trader, side, eth, tokens, price) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  (pool, tx_hash, log_index, block, ts, trader, side, quote_amt, tokens, price) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+
+/** sens de chaque pool (le token est-il token0 ?) et décimales de l'actif de paire */
+const poolInfo = new Map<string, { is0: boolean; dec: number }>();
 
 const known = new Set<string>(); // pools déjà rattrapées
 const blockTs = new Map<bigint, number>();
@@ -42,14 +45,17 @@ async function store(logs: SwapLog[]) {
         publicClient.getTransaction({ hash: l.transactionHash! }),
       ]);
       const { amount0, amount1, sqrtPriceX96 } = l.args;
-      // token = token0, WETH = token1. amount1 > 0 : WETH entre dans la pool -> achat
-      const buy = amount1 > 0n;
+      const info = poolInfo.get(l.address.toLowerCase()) ?? { is0: true, dec: 18 };
+      const tokenAmt = info.is0 ? amount0 : amount1;
+      const quoteAmt = info.is0 ? amount1 : amount0;
+      // l'actif de paire entre dans la pool -> quelqu'un achète le token
+      const buy = quoteAmt > 0n;
       return [
         l.address.toLowerCase(), l.transactionHash, l.logIndex, Number(l.blockNumber), ts, tx.from.toLowerCase(),
         buy ? "buy" : "sell",
-        Math.abs(Number(amount1)) / 1e18,
-        Math.abs(Number(amount0)) / 1e18,
-        sqrtToPrice(sqrtPriceX96),
+        Math.abs(Number(quoteAmt)) / 10 ** info.dec,
+        Math.abs(Number(tokenAmt)) / 1e18,
+        sqrtToPrice(sqrtPriceX96, info.is0, info.dec),
       ] as const;
     })
   );
@@ -97,6 +103,7 @@ async function tick() {
   const latest = await publicClient.getBlockNumber();
   const last = kv.get("indexer:last") ? BigInt(kv.get("indexer:last")!) : latest;
   const all = launchesRepo.pools();
+  for (const p of all) poolInfo.set(p.pool, { is0: !!p.token_is0, dec: p.quote_decimals });
 
   // nouvelles pools : rattrapage depuis leur bloc de lancement
   const fresh = all.filter((p) => !known.has(p.pool));

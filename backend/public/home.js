@@ -7,6 +7,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   XL.feeShare();
 
+  // ------------------------------------------------------------ paire
+  let getPair = () => null;
+  XL.pairPicker($("pairs"), (q) => {
+    $("stagePair").innerHTML = q ? `, appariée à ${XL.pair(q)}` : "";
+    $("pairHint").textContent = !q ? ""
+      : q.kind === "stock"
+        ? `Les acheteurs paieront en ${q.symbol}, et tes frais arriveront en ${q.symbol}.${q.test ? " Action de test, sans valeur." : ""}`
+        : `Les acheteurs paieront en ${q.symbol}, et tes frais arriveront en ${q.symbol}.`;
+  }).then((fn) => (getPair = fn));
+
   // ------------------------------------------------------------ aperçu de la pièce
   const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 195 + (h % 70); };
   function preview() {
@@ -91,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const r = await api("/api/launch", {
         method: "POST",
-        body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim() }),
+        body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim(), quote: getPair()?.address }),
       });
       $("bigCoin").classList.remove("pulse"); void $("bigCoin").offsetWidth; $("bigCoin").classList.add("pulse");
       $("composer").hidden = true;
@@ -113,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("doneAgain").addEventListener("click", () => {
     $("composer").reset(); imageUrl = ""; symbolTouched = false;
+    $("pairs").dispatchEvent(new Event("change"));
     $("bigCoin").classList.remove("has-img"); $("bigCoin").querySelector("img")?.remove();
     $("fileInfo").textContent = "PNG, JPG, GIF ou WebP, 1 Mo max.";
     preview();
@@ -129,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
       seen = new Set(rows.map((t) => t.token));
       $("live").hidden = !rows.length;
       $("liveEmpty").hidden = !!rows.length;
-      $("stats").innerHTML = `<span><b>${stats.launches}</b> tokens lancés</span><span><b>${fmt.eth(stats.volume24h)}</b> échangés en 24 h</span>`;
+      $("stats").innerHTML = `<span><b>${stats.launches}</b> tokens lancés</span><span><b>${fmt.usd(stats.volume24hUsd)}</b> échangés en 24 h</span>`;
     } catch {}
   }
   loadLive();

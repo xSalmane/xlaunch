@@ -29,7 +29,8 @@
   .e .field { gap: 4px; }
   .e .field > span { font-size: 13px; }
   .e .input { padding: 8px 10px; font-size: 14px; }
-  .e textarea.input { min-height: 0; height: 54px; resize: none; }
+  .e textarea.input { min-height: 0; height: 46px; resize: none; }
+  .e select.input { appearance: auto; }
   .e .btn.wide { padding: 10px 14px; }
   .e-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
   .e-stats dt { font-size: 12px; color: var(--mute); }
@@ -72,6 +73,9 @@
       <label class="field"><span>Nom</span><input class="input" id="name" maxlength="32" autocomplete="off" placeholder="Croissant"></label>
       <label class="field"><span>Ticker</span><input class="input ticker-input" id="symbol" maxlength="10" autocomplete="off" placeholder="CRSNT"></label>
     </div>
+    <label class="field"><span>Apparier avec</span>
+      <select class="input" id="pair"><option>ETH</option></select>
+    </label>
     <label class="field"><span>Description <small>(optionnelle)</small></span>
       <textarea class="input" id="description" maxlength="280" placeholder="En une phrase, pourquoi ce token ?"></textarea>
     </label>

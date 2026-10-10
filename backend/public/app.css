@@ -255,3 +255,22 @@ textarea.input { resize: vertical; min-height: 76px; }
 
 /* bandeau testnet */
 .testnet { background: var(--blue); color: #fff; text-align: center; font-size: 14px; padding: 7px 16px; }
+
+/* paire (ETH, USDC, action) */
+.pairtag { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; padding: 3px 9px 3px 7px; border-radius: 999px; background: var(--blue-soft); color: var(--ink); white-space: nowrap; }
+.pairtag img { width: 16px; height: 16px; border-radius: 50%; }
+.pairtag-stock { background: color-mix(in srgb, var(--up) 14%, transparent); }
+.pairtag.big { font-size: 15px; padding: 5px 12px 5px 9px; }
+
+/* choix de la paire au lancement */
+.pairs { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.pairs legend { font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 8px; }
+.pair-group { font-size: 12px; color: var(--mute); margin-top: 2px; }
+.pair-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.pair-opt { position: relative; }
+.pair-opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pair-opt span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 14px; font-weight: 600; cursor: pointer; }
+.pair-opt span img { width: 16px; height: 16px; border-radius: 50%; }
+.pair-opt input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pair-opt input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pair-opt input:disabled + span { opacity: 0.45; cursor: not-allowed; }

@@ -18,7 +18,8 @@ const env = process.env;
 env.CHAIN ??= "base-sepolia";
 const chain = env.CHAIN === "base" ? base : baseSepolia;
 env.RPC_URL ??= env.CHAIN === "base" ? "https://mainnet.base.org" : "https://sepolia.base.org";
-env.DB_PATH ??= path.join(DATA, "xlaunch.db");
+// v2 (paires multiples) : nouvelle base et nouveau contrat, les tokens de la v1 restent sur l'ancien contrat
+env.DB_PATH ??= path.join(DATA, "xlaunch-v2.db");
 env.UPLOAD_DIR ??= path.join(DATA, "uploads");
 if (!env.PUBLIC_URL && env.RAILWAY_PUBLIC_DOMAIN) env.PUBLIC_URL = `https://${env.RAILWAY_PUBLIC_DOMAIN}`;
 env.PUBLIC_URL ??= `http://localhost:${env.PORT ?? 8787}`;
@@ -42,7 +43,7 @@ const attester = privateKeyToAccount(env.ATTESTER_PRIVATE_KEY as Hex);
 console.log(`Chaîne ${env.CHAIN} — relayer (paie le gas) : ${relayer.address}`);
 
 // ------------------------------------------------------------------ contrat
-const factoryFile = path.join(DATA, `factory-${chain.id}.json`);
+const factoryFile = path.join(DATA, `factory-v2-${chain.id}.json`);
 if (!env.FACTORY_ADDRESS && fs.existsSync(factoryFile)) {
   env.FACTORY_ADDRESS = JSON.parse(fs.readFileSync(factoryFile, "utf8")).address;
 }

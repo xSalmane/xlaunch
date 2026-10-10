@@ -24,6 +24,7 @@ export type LocalChain = {
   router: Address;
   routerAbi: Abi;
   treasury: Address;
+  usdc: Address; // faux USDC (6 décimales), minter = relayer
   stop: () => void;
 };
 
@@ -70,11 +71,15 @@ export async function startLocalChain(opts: { port?: number; treasury?: Address;
 
   const fx = JSON.parse(fs.readFileSync(new URL("../../contracts/out/XLaunchFactory.json", import.meta.url), "utf8"));
   const treasury = opts.treasury ?? "0x000000000000000000000000000000000000bEEF";
+  // owner = relayer, comme l'installation automatique en production (il gère la liste des paires)
   const factory = await deploy(fx.abi, fx.bytecode, [
-    privateKeyToAccount(KEYS.deployer).address, npm, WETH,
+    privateKeyToAccount(KEYS.relayer).address, npm, WETH,
     privateKeyToAccount(KEYS.relayer).address, privateKeyToAccount(KEYS.attester).address,
     treasury, opts.creatorFeeBps ?? 5000,
   ]);
 
-  return { rpc, factory, router, routerAbi: routerArt.abi, treasury, stop: () => anvil.kill() };
+  const mock = JSON.parse(fs.readFileSync(new URL("../../contracts/out/MockAsset.json", import.meta.url), "utf8"));
+  const usdc = await deploy(mock.abi, mock.bytecode, ["USD Coin (test)", "USDC", 6, privateKeyToAccount(KEYS.relayer).address]);
+
+  return { rpc, factory, router, routerAbi: routerArt.abi, treasury, usdc, stop: () => anvil.kill() };
 }

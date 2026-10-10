@@ -23,7 +23,17 @@ export const config = {
   relayerKey: req("RELAYER_PRIVATE_KEY") as Hex,
   attesterKey: req("ATTESTER_PRIVATE_KEY") as Hex, // clé DIFFÉRENTE du relayer
   minRelayerBalanceEth: num("MIN_RELAYER_BALANCE_ETH", 0.003),
-  startFdvEth: num("START_FDV_ETH", 3), // valorisation de départ en ETH
+  startFdvUsd: num("START_FDV_USD", 10_000), // valorisation de départ en dollars, quelle que soit la paire
+  // USDC : adresses officielles Circle (https://developers.circle.com/stablecoins/usdc-contract-addresses)
+  usdc: (process.env.USDC_ADDRESS ??
+    ((process.env.CHAIN ?? "base-sepolia") === "base"
+      ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+      : "0x036CbD53842c5426634e7929541eC2318f3dCF7e")) as Address,
+  // actions tokenisées Coinbase sur Base (liste + prix de référence), API publique sans clé
+  stocksApi: process.env.STOCKS_API ?? "https://api.coinbase.com/v1/tokenized-stocks",
+  // fausses actions de test (testnet / local) : créées et enregistrées dans ce dossier
+  dataDir: process.env.DATA_DIR ?? "./data",
+  mockStocks: (process.env.MOCK_STOCKS ?? ((process.env.CHAIN ?? "base-sepolia") === "base" ? "0" : "1")) === "1",
 
   // auth X (OAuth 2.0, client confidentiel)
   // vides tant que l'app X n'est pas configurée : la connexion X affiche alors un message clair

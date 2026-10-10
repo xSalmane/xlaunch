@@ -7,7 +7,8 @@ import { config, blocklist, explorer } from "./config.js";
 import { authRouter, requireAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
 import { launchesRepo, claimsRepo } from "./db.js";
 import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps } from "./chain.js";
-import { listTokens, getToken, serialize, trades, chart, globalStats } from "./market.js";
+import { listTokens, getToken, trades, chart, globalStats } from "./market.js";
+import { initQuotes, getQuotes, quoteOf, mintTestStocks } from "./quotes.js";
 import { startIndexer } from "./indexer.js";
 
 const app = express();
@@ -101,40 +102,46 @@ app.use("/u", express.static(uploadDir, {
 app.get("/api/config", async (_req, res) => {
   res.json({
     chainId, chain: config.chain, explorer, factory: config.factory, weth: config.weth,
-    creatorFeeBps: await creatorFeeBps(), devLogin: DEV_LOGIN,
+    creatorFeeBps: await creatorFeeBps(), devLogin: DEV_LOGIN, testFaucet: getQuotes().some((q) => q.mock),
     rules: { minAccountAgeDays: config.minAccountAgeDays, minFollowers: config.minFollowers, perDay: config.launchesPerUserPerDay },
   });
 });
 
 app.get("/api/stats", (_req, res) => res.json(globalStats()));
 
+/** actifs avec lesquels on peut apparier un nouveau token */
+app.get("/api/quotes", (_req, res) => {
+  res.json(getQuotes().map((q) => ({
+    address: q.address, symbol: q.symbol, name: q.name, kind: q.kind, decimals: q.decimals,
+    usd: q.usd, icon: q.icon, test: q.mock, paused: q.paused,
+  })));
+});
+
 app.get("/api/tokens", async (req, res) => {
-  const bps = await creatorFeeBps();
-  const rows = listTokens({
+  res.json(listTokens({
     sort: String(req.query.sort ?? "new"),
     q: String(req.query.q ?? "").slice(0, 64),
     limit: Number(req.query.limit ?? 30),
     offset: Number(req.query.offset ?? 0),
-  });
-  res.json(rows.map((r) => serialize(r, bps)));
+    creatorFeeBps: await creatorFeeBps(),
+  }));
 });
 
 // compat embed
 app.get("/api/recent", async (_req, res) => {
-  const bps = await creatorFeeBps();
-  res.json(listTokens({ sort: "new", limit: 20 }).map((r) => serialize(r, bps)));
+  res.json(listTokens({ sort: "new", limit: 20, creatorFeeBps: await creatorFeeBps() }));
 });
 
 app.get("/api/token/:token", async (req, res) => {
-  const row = isAddress(req.params.token) ? getToken(req.params.token) : undefined;
-  if (!row) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
-  res.json({ ...serialize(row, await creatorFeeBps()), explorer: `${explorer}/token/${row.token}` });
+  const t = isAddress(req.params.token) ? getToken(req.params.token, await creatorFeeBps()) : undefined;
+  if (!t) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
+  res.json({ ...t, explorer: `${explorer}/token/${t.token}` });
 });
 
 app.get("/api/token/:token/trades", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
   if (!row) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
-  res.json(trades(row.pool!, Number(req.query.limit ?? 50)));
+  res.json(trades(row, Number(req.query.limit ?? 50)));
 });
 
 app.get("/api/token/:token/chart", (req, res) => {
@@ -199,10 +206,13 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   const symbol = String(req.body?.symbol ?? "").trim().replace(/^\$/, "").toUpperCase();
   const image = String(req.body?.image ?? "").trim();
   const description = String(req.body?.description ?? "").trim().slice(0, 280);
+  const quote = quoteOf(String(req.body?.quote ?? config.weth));
 
   if (!NAME_RE.test(name)) return res.status(400).json({ error: "Le nom doit faire 1 à 32 caractères (lettres, chiffres, espaces)." });
   if (!SYMBOL_RE.test(symbol)) return res.status(400).json({ error: "Le ticker doit faire 2 à 10 lettres ou chiffres." });
   if (image && !IMAGE_RE.test(image)) return res.status(400).json({ error: "Ajoute l'image avec le bouton d'import." });
+  if (!quote) return res.status(400).json({ error: "Cette paire n'est pas disponible. Choisis ETH, USDC ou une action de la liste." });
+  if (quote.paused) return res.status(400).json({ error: `${quote.symbol} est suspendu par son émetteur en ce moment. Choisis une autre paire.` });
 
   const hay = `${name} ${symbol}`.toLowerCase();
   if (blocklist.some((w) => hay.includes(w))) return res.status(400).json({ error: "Ce nom ou ce ticker n'est pas autorisé. Choisis-en un autre." });
@@ -212,7 +222,7 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   if (!(await relayerHasFunds())) return res.status(503).json({ error: "Les lancements sont en pause pour le moment. Réessaie un peu plus tard." });
 
   const slot = launchesRepo.reserve(
-    { xId: s.sub, handle: s.handle, name, symbol, image, description },
+    { xId: s.sub, handle: s.handle, name, symbol, image, description, quote: quote.address, quoteSymbol: quote.symbol, quoteDecimals: quote.decimals },
     config.launchesPerUserPerDay, config.globalLaunchesPerHour
   );
   if (slot === "symbol_taken") return res.status(409).json({ error: `Le ticker $${symbol} existe déjà. Choisis-en un autre.` });
@@ -221,7 +231,7 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   if (slot === "global_limit") return res.status(429).json({ error: "Beaucoup de lancements en ce moment. Réessaie dans quelques minutes." });
 
   try {
-    const r = await launchToken({ name, symbol, image, xId: s.sub });
+    const r = await launchToken({ name, symbol, image, xId: s.sub, quote });
     launchesRepo.markDone(slot, r);
     res.json({ token: r.token, txHash: r.txHash, share: `${config.publicUrl}/t/${r.token}`, explorer: `${explorer}/token/${r.token}` });
   } catch (e) {
@@ -233,19 +243,23 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
 
 app.get("/api/creator", requireAuth, async (_req, res) => {
   const s = res.locals.session as Session;
-  const bps = await creatorFeeBps();
-  const mine = listTokens({ xId: s.sub, limit: 100 }).map((r) => serialize(r, bps));
-  const state = await creatorState(s.sub, mine.map((t) => t.token as Address));
+  const mine = listTokens({ xId: s.sub, limit: 100, creatorFeeBps: await creatorFeeBps() });
+  const assets = creatorAssets(mine.map((t) => ({ token: t.token!, quote: t.quote.address })));
+  const state = await creatorState(s.sub, assets);
   res.json({
     boundWallet: state.boundWallet,
     tokens: mine,
-    earnedTotal: mine.reduce((a, t) => a + t.creatorFeesEarned, 0),
-    escrow: state.escrow.map((e) => ({
-      ...e,
-      symbol: e.asset.toLowerCase() === config.weth.toLowerCase()
-        ? "ETH"
-        : mine.find((t) => t.token?.toLowerCase() === e.asset.toLowerCase())?.symbol ?? "?",
-    })),
+    earnedTotalUsd: mine.reduce((a, t) => a + t.creatorFeesUsd, 0),
+    escrow: state.escrow.map((e) => {
+      const q = quoteOf(e.asset);
+      const t = mine.find((x) => x.token?.toLowerCase() === e.asset.toLowerCase());
+      const decimals = q ? q.decimals : 18;
+      return {
+        ...e, decimals,
+        symbol: q?.symbol ?? t?.symbol ?? "?",
+        usd: q ? (Number(BigInt(e.amount)) / 10 ** decimals) * q.usd : (t ? (Number(BigInt(e.amount)) / 1e18) * t.priceUsd : 0),
+      };
+    }),
   });
 });
 
@@ -260,8 +274,9 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
 
   claiming.add(s.sub);
   try {
-    const tokens = launchesRepo.byUser(s.sub).map((r) => r.token as Address);
-    const r = await claimFor(s.sub, getAddress(recipient), tokens);
+    const rows = launchesRepo.byUser(s.sub);
+    const tokens = rows.map((r) => r.token as Address);
+    const r = await claimFor(s.sub, getAddress(recipient), tokens, creatorAssets(rows.map((x) => ({ token: x.token!, quote: x.quote }))));
     claimsRepo.insert(s.sub, recipient, r.txHash);
     res.json({ ...r, explorer: `${explorer}/tx/${r.txHash}` });
   } catch (e) {
@@ -272,9 +287,40 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
   }
 });
 
+/** tous les actifs où un créateur peut avoir des gains : ses tokens + les actifs de paire utilisés */
+function creatorAssets(items: { token: string; quote: string }[]): Address[] {
+  const set = new Map<string, Address>();
+  for (const i of items) {
+    set.set(i.token.toLowerCase(), getAddress(i.token));
+    if (i.quote) set.set(i.quote.toLowerCase(), getAddress(i.quote));
+  }
+  return [...set.values()];
+}
+
+// Robinet de test : 10 unités de chaque fausse action vers une adresse (testnet uniquement)
+const faucetUsed = new Map<string, number>();
+app.post("/api/test-faucet", requireAuth, express.json({ limit: "2kb" }), async (req, res) => {
+  const s = res.locals.session as Session;
+  if (!getQuotes().some((q) => q.mock)) return res.status(404).json({ error: "Pas de robinet de test sur ce réseau." });
+  const to = String(req.body?.address ?? "").trim();
+  if (!isAddress(to)) return res.status(400).json({ error: "Cette adresse n'est pas valide (0x suivi de 40 caractères)." });
+  const last = faucetUsed.get(s.sub) ?? 0;
+  if (Date.now() - last < 3_600_000) return res.status(429).json({ error: "Robinet déjà utilisé : réessaie dans une heure." });
+  faucetUsed.set(s.sub, Date.now());
+  try {
+    const symbols = await mintTestStocks(getAddress(to));
+    res.json({ sent: symbols });
+  } catch (e) {
+    faucetUsed.delete(s.sub);
+    console.error("faucet", e);
+    res.status(500).json({ error: "L'envoi a échoué. Réessaie dans un instant." });
+  }
+});
+
 app.use("/api", (_req, res) => res.status(404).json({ error: "Route inconnue." }));
 app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page introuvable — XLaunch", description: "" })));
 
+await initQuotes();
 startIndexer();
 app.listen(config.port, () => {
   console.log(`XLaunch sur ${config.publicUrl} (port ${config.port}) — chaîne ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — connexion démo active" : ""}`);

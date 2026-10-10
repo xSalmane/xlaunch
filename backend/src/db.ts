@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS launches (
   pool         TEXT,
   tx_hash      TEXT,
   launch_block INTEGER,
-  init_price   REAL,                            -- prix de départ en ETH par token
+  quote        TEXT NOT NULL DEFAULT '',       -- actif de la paire (WETH, USDC, action…)
+  quote_symbol TEXT NOT NULL DEFAULT 'ETH',
+  quote_decimals INTEGER NOT NULL DEFAULT 18,
+  token_is0    INTEGER NOT NULL DEFAULT 1,      -- le token est-il token0 de la pool
+  init_price   REAL,                            -- prix de départ, en actif de paire par token
   error        TEXT,
   created_at   INTEGER NOT NULL
 );
@@ -34,9 +38,9 @@ CREATE TABLE IF NOT EXISTS swaps (
   ts         INTEGER NOT NULL,
   trader     TEXT NOT NULL,
   side       TEXT NOT NULL,      -- buy | sell
-  eth        REAL NOT NULL,      -- montant ETH échangé
+  quote_amt  REAL NOT NULL,      -- montant d'actif de paire échangé
   tokens     REAL NOT NULL,      -- montant de tokens échangé
-  price      REAL NOT NULL,      -- ETH par token après le swap
+  price      REAL NOT NULL,      -- actif de paire par token après le swap
   PRIMARY KEY (tx_hash, log_index)
 );
 CREATE INDEX IF NOT EXISTS swaps_pool_ts ON swaps(pool, ts);
@@ -58,6 +62,7 @@ export const now = () => Math.floor(Date.now() / 1000);
 export type LaunchRow = {
   id: number; x_id: string; handle: string; name: string; symbol: string; image: string; description: string;
   status: string; token: string | null; pool: string | null; tx_hash: string | null; launch_block: number | null;
+  quote: string; quote_symbol: string; quote_decimals: number; token_is0: number;
   init_price: number | null; error: string | null; created_at: number;
 };
 
@@ -89,7 +94,8 @@ export const launchesRepo = {
   },
   /** réserve un slot de façon atomique (évite le double-clic / requêtes parallèles) */
   reserve(
-    p: { xId: string; handle: string; name: string; symbol: string; image: string; description: string },
+    p: { xId: string; handle: string; name: string; symbol: string; image: string; description: string;
+      quote: string; quoteSymbol: string; quoteDecimals: number },
     perDay: number, perHour: number,
   ): number | "user_limit" | "global_limit" | "pending" | "symbol_taken" {
     const tx = db.transaction(() => {
@@ -98,15 +104,16 @@ export const launchesRepo = {
       if (launchesRepo.countUserLast24h(p.xId) >= perDay) return "user_limit" as const;
       if (launchesRepo.countGlobalLastHour() >= perHour) return "global_limit" as const;
       const r = db
-        .prepare(`INSERT INTO launches (x_id, handle, name, symbol, image, description, created_at) VALUES (?,?,?,?,?,?,?)`)
-        .run(p.xId, p.handle, p.name, p.symbol, p.image, p.description, now());
+        .prepare(`INSERT INTO launches (x_id, handle, name, symbol, image, description, quote, quote_symbol, quote_decimals, created_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .run(p.xId, p.handle, p.name, p.symbol, p.image, p.description, p.quote.toLowerCase(), p.quoteSymbol, p.quoteDecimals, now());
       return Number(r.lastInsertRowid);
     });
     return tx.immediate();
   },
-  markDone(id: number, r: { token: string; pool: string; txHash: string; block: number; initPrice: number }) {
-    db.prepare(`UPDATE launches SET status='done', token=?, pool=?, tx_hash=?, launch_block=?, init_price=? WHERE id=?`)
-      .run(r.token, r.pool.toLowerCase(), r.txHash, r.block, r.initPrice, id);
+  markDone(id: number, r: { token: string; pool: string; txHash: string; block: number; initPrice: number; tokenIsToken0: boolean }) {
+    db.prepare(`UPDATE launches SET status='done', token=?, pool=?, tx_hash=?, launch_block=?, init_price=?, token_is0=? WHERE id=?`)
+      .run(r.token, r.pool.toLowerCase(), r.txHash, r.block, r.initPrice, r.tokenIsToken0 ? 1 : 0, id);
   },
   markFailed(id: number, error: string) {
     db.prepare(`UPDATE launches SET status='failed', error=? WHERE id=?`).run(error.slice(0, 500), id);
@@ -117,8 +124,9 @@ export const launchesRepo = {
   byToken(token: string): LaunchRow | undefined {
     return db.prepare(`SELECT * FROM launches WHERE lower(token)=lower(?) AND status='done'`).get(token) as LaunchRow | undefined;
   },
-  pools(): { pool: string; launch_block: number }[] {
-    return db.prepare(`SELECT pool, launch_block FROM launches WHERE status='done'`).all() as { pool: string; launch_block: number }[];
+  pools(): { pool: string; launch_block: number; token_is0: number; quote_decimals: number }[] {
+    return db.prepare(`SELECT pool, launch_block, token_is0, quote_decimals FROM launches WHERE status='done'`)
+      .all() as { pool: string; launch_block: number; token_is0: number; quote_decimals: number }[];
   },
 };
 

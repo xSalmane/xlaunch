@@ -55,12 +55,24 @@
     <section class="panel">
       <h2>Mes tokens</h2>
       <table class="tlist" id="mine">
-        <thead><tr><th>Token</th><th>Volume total</th><th>Tes frais</th></tr></thead>
+        <thead><tr><th>Token</th><th>Paire</th><th>Volume total</th><th>Tes frais</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="empty" id="mineEmpty" hidden>Tu n'as encore lancé aucun token.<br><a class="btn" href="/">Lancer mon token</a></div>
     </section>
   </div>
+
+  <section class="panel" id="faucet" hidden style="max-width:640px;margin-bottom:56px">
+    <h2>Actions de test</h2>
+    <p class="mute" style="margin:0 0 12px">Sur le testnet, les actions tokenisées sont remplacées par des actions de test sans valeur. Reçois-en 10 de chaque sur ton wallet pour essayer d'acheter des tokens appariés à une action.</p>
+    <form class="claim-form" id="faucetForm" novalidate>
+      <label class="field"><span>Ton adresse Base Sepolia</span>
+        <input class="input" id="faucetAddr" placeholder="0x…" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="notice" id="faucetMsg" role="status" hidden></div>
+      <button class="btn quiet" type="submit" id="faucetBtn">Recevoir des actions de test</button>
+    </form>
+  </section>
 </main>
 
 <footer class="foot">
