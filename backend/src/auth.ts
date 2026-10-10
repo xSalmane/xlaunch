@@ -40,17 +40,18 @@ authRouter.get("/auth/x/start", (req, res) => {
   pending.set(state, { verifier, ret: safeReturn(req.query.return), exp: Date.now() + 10 * 60_000 });
   for (const [k, v] of pending) if (v.exp < Date.now()) pending.delete(k);
 
-  const url = new URL("https://x.com/i/oauth2/authorize");
-  url.search = new URLSearchParams({
+  // encodage %20 (et non "+") pour les espaces, comme dans la documentation X
+  const params: Record<string, string> = {
     response_type: "code",
     client_id: config.xClientId,
     redirect_uri: REDIRECT_URI,
-    scope: "users.read tweet.read",
+    scope: "tweet.read users.read",
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",
-  }).toString();
-  res.redirect(url.toString());
+  };
+  const qs = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  res.redirect(`https://x.com/i/oauth2/authorize?${qs}`);
 });
 
 authRouter.get("/auth/x/callback", async (req, res) => {
