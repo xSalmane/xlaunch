@@ -4,105 +4,180 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>XLaunch</title>
+<!-- dans le tweet, chaque lien s'ouvre dans un nouvel onglet au lieu de remplacer la carte -->
+<base target="_blank">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <style>
-  /* l'embed doit tenir dans la carte du tweet (480×600, réduite par X) et défiler si besoin */
+  /* La carte X fait 480×600 et peut être réduite : en-tête et onglets fixes, contenu qui défile. */
   html, body { height: 100%; }
-  body { font-size: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .testnet { font-size: 12px; padding: 4px 10px; }
-  .e { max-width: 480px; margin: 0 auto; padding: 10px 12px 14px; display: grid; gap: 10px; }
-  .e-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .e-top .brand { font-size: 16px; }
-  .e-top .brand-mark { width: 18px; height: 18px; }
-  .e-top .auth { margin: 0; }
-  .e-top .auth .who { width: auto; padding: 2px 4px; gap: 6px; }
-  .e-top .auth .who img, .e-top .auth .who .avatar-ph { width: 24px; height: 24px; }
-  .e-top .auth .who-txt b { font-size: 13px; }
+  body { font-size: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .testnet { font-size: 11.5px; padding: 3px 10px; flex: none; }
+  .e-top { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .e-top .brand { font-size: 17px; padding: 4px 6px; gap: 8px; }
+  .e-top .brand-mark { width: 18px; height: 18px; box-shadow: inset 0 0 0 3.5px var(--bg), 0 0 0 2px var(--blue); }
+  .e-top .live { margin-left: 0; font-size: 12px; }
+  .e-top .auth { margin-left: auto; }
+  .e-top .auth .who { width: auto; padding: 2px; gap: 6px; }
+  .e-top .auth .who img, .e-top .auth .avatar-ph { width: 28px; height: 28px; }
+  .e-top .auth .who-txt b { font-size: 13px; max-width: 110px; }
   .e-top .auth .who-txt .mute, .e-top .auth .who-out { display: none; }
   .e-top .auth .btn { width: auto; padding: 6px 12px; font-size: 13px; }
-  .e-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; display: grid; gap: 9px; }
-  .e-head { display: flex; gap: 10px; align-items: center; }
-  .e-head h1 { font: 800 19px/1.1 var(--display); letter-spacing: -0.02em; margin: 0; }
-  .e-pair { display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; }
-  .e .field { gap: 4px; }
-  .e .field > span { font-size: 13px; }
-  .e .input { padding: 8px 10px; font-size: 14px; }
-  .e textarea.input { min-height: 0; height: 46px; resize: none; }
-  .e select.input { appearance: auto; }
-  .e .btn.wide { padding: 10px 14px; }
-  .e-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
-  .e-stats dt { font-size: 12px; color: var(--mute); }
-  .e-stats dd { margin: 2px 0 0; font: 700 18px/1.2 var(--display); }
-  .e-foot { text-align: center; font-size: 12px; color: var(--mute); }
-  .e-list { display: grid; }
-  .e-list a { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); text-decoration: none; }
-  .e-list a:first-child { border-top: 0; }
-  .e-list .r { margin-left: auto; text-align: right; font-size: 13px; }
+
+  .e-tabs { flex: none; display: flex; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .e-tabs button { flex: 1; border: 0; background: none; padding: 9px 4px 0; color: var(--mute); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .e-tabs button span { display: inline-flex; align-items: center; gap: 5px; padding-bottom: 8px; border-bottom: 3px solid transparent; }
+  .e-tabs button svg.i { width: 16px; height: 16px; }
+  .e-tabs [aria-selected="true"] { color: var(--ink); font-weight: 700; }
+  .e-tabs [aria-selected="true"] span { border-bottom-color: var(--blue); }
+
+  .e-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .e-pane { padding: 10px 12px 14px; }
+
+  /* compositeur : aperçu du post à gauche, champs à droite */
+  .e-compose { display: grid; gap: 10px; }
+  .e-row { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: start; }
+  .e-prev { position: relative; width: 92px; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--soft); border: 1px solid var(--line); cursor: pointer; }
+  .e-prev > svg, .e-prev > img, .e-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .e-art > svg, .e-art > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  @media (prefers-reduced-motion: no-preference) { .e-prev.bump { animation: bump 0.25s ease-out; } }
+  .e-prev input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .e-prev .e-cam { position: absolute; right: 5px; bottom: 5px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: rgb(0 0 0 / 0.55); color: #fff; pointer-events: none; }
+  .e-prev .e-cam svg.i { width: 14px; height: 14px; }
+  .e-fields { display: grid; gap: 7px; min-width: 0; }
+  .e-name { border: 0; background: none; outline: none; font-size: 18px; font-weight: 600; padding: 2px 0; width: 100%; }
+  .e-name::placeholder { color: var(--mute); font-weight: 500; }
+  .e-line { display: flex; gap: 6px; min-width: 0; }
+  .e-tick { display: flex; align-items: center; background: var(--soft); border-radius: 999px; padding: 0 4px 0 10px; flex: 1; min-width: 0; }
+  .e-tick b { color: var(--mute); }
+  .e-tick input { border: 0; background: none; outline: none; width: 100%; min-width: 0; text-transform: uppercase; font-weight: 700; padding: 7px 4px; }
+  .e-pair { flex: 1.15; min-width: 0; border: 0; border-radius: 999px; background: var(--soft); padding: 7px 10px; font-weight: 600; font-size: 13px; cursor: pointer; }
+  .e-desc { border: 0; border-top: 1px solid var(--line); background: none; outline: none; resize: none; width: 100%; font-size: 14px; padding: 9px 0 0; height: 44px; }
+  .e-desc::placeholder { color: var(--mute); }
+  .e-bar { display: flex; align-items: center; gap: 10px; }
+  .e-bar .btn { padding: 9px 20px; }
+  .e-quota { font-size: 12px; color: var(--mute); flex: 1; min-width: 0; line-height: 1.3; }
+  .e-hint { font-size: 12px; color: var(--mute); margin: 0; }
+
+  /* lancement réussi */
+  .e-done { display: grid; gap: 10px; text-align: center; justify-items: center; padding: 6px 0 4px; }
+  .e-done .e-prev { width: 120px; cursor: default; }
+  .e-done h2 { font: 800 22px/1.15 var(--display); margin: 0; letter-spacing: -0.02em; }
+  .e-done p { margin: 0; }
+  .e-done .btns { display: grid; gap: 8px; width: 100%; }
+
+  /* mini-fil : posts Instagram plus serrés */
+  .e-sub { display: flex; align-items: baseline; justify-content: space-between; margin: 16px 0 2px; }
+  .e-sub b { font-size: 15px; }
+  .e-sub a { font-size: 13px; color: var(--blue); }
+  .e .ig { padding: 10px 0 14px; }
+  .e .ig:last-child { border-bottom: 0; }
+  .e .ig-head { padding: 0 0 8px; gap: 8px; }
+  .e .ig-head .post-avatar { width: 30px; height: 30px; }
+  .e .ig-head .who-line b { font-size: 13px; }
+  .e .ig-head .who-line .mute, .e .ig-head .pairtag { font-size: 12px; }
+  .e .ig-media { aspect-ratio: 16 / 10; border-radius: 12px; }
+  .e .ig-media .ig-pill { left: 10px; bottom: 10px; padding: 4px 10px; font-size: 12px; }
+  .e .ig-burst { width: 90px; height: 90px; margin: -45px 0 0 -45px; }
+  .e .ig-actions { padding: 4px 0 0; gap: 0; }
+  .e .ig-actions > .ig-btn:first-child { margin-left: -8px; }
+  .e .ig-btn { width: 36px; height: 36px; }
+  .e .ig-btn svg.i { width: 22px; height: 22px; }
+  .e .ig-actions .btn { padding: 5px 12px; font-size: 13px; }
+  .e .ig-likes, .e .ig-stats { padding: 1px 0; font-size: 13px; }
+  .e .ig-caption { margin: 3px 0 0; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .e .ig-more { margin: 4px 0 0; font-size: 13px; }
+  .e-token .ig { border-bottom: 0; padding-top: 2px; }
+  .e-token .ig-caption { -webkit-line-clamp: 4; }
+  .e-cta { position: sticky; bottom: -14px; display: grid; gap: 8px; margin: 4px -12px -14px; padding: 8px 12px 10px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
+
+  .e-empty { text-align: center; color: var(--mute); padding: 26px 10px; }
+  .e-empty b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
+  .e-foot { text-align: center; font-size: 11.5px; color: var(--mute); padding: 6px 0 0; }
+
+  /* carte très réduite (timeline mobile) */
+  @media (max-width: 360px) {
+    .e-row { grid-template-columns: 76px 1fr; gap: 10px; }
+    .e-prev { width: 76px; }
+    .e-top .live { display: none; }
+    .e-tabs button svg.i { display: none; }
+  }
+  @media (max-height: 470px) { .e .ig-media { aspect-ratio: 16 / 9; } }
 </style>
 <script src="/static/app.js" defer></script>
 <script src="/static/embed.js" defer></script>
 </head>
 <body data-compact>
-<div class="e">
-  <div class="e-top">
-    <a class="brand" href="/" target="_blank" rel="noopener"><span class="brand-mark"></span>XLaunch</a>
-    <div class="auth" data-auth></div>
-  </div>
+<header class="e-top">
+  <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+  <span class="live"><span class="live-dot"></span>Live</span>
+  <div class="auth" data-auth></div>
+</header>
 
-  <!-- fiche token (?token=…) -->
-  <section class="e-card" id="tokenCard" hidden>
-    <div class="e-head"><div id="tCoin"></div><div><h1 id="tTitle"></h1><div class="mute" id="tBy"></div></div></div>
-    <dl class="e-stats">
-      <div><dt>Market cap</dt><dd id="tMcap"></dd></div>
-      <div><dt>24h change</dt><dd id="tChange"></dd></div>
-    </dl>
-    <a class="btn wide" id="tBuy" target="_blank" rel="noopener">Buy on Uniswap</a>
-    <a class="btn quiet wide" id="tOpen" target="_blank" rel="noopener">See chart and trades</a>
-    <button class="btn quiet wide" type="button" id="tOwn">Launch my own token</button>
+<nav class="e-tabs" role="tablist">
+  <button type="button" role="tab" data-pane="launch" aria-selected="true"><span id="tabLaunchIcon"></span></button>
+  <button type="button" role="tab" data-pane="trending" aria-selected="false"><span id="tabTrendIcon"></span></button>
+  <button type="button" role="tab" data-pane="new" aria-selected="false"><span id="tabNewIcon"></span></button>
+</nav>
+
+<main class="e-body e" id="body">
+  <!-- token partagé (?token=…) : son post, puis l'invitation à lancer le sien -->
+  <section class="e-pane e-token" id="pane-token" hidden>
+    <div id="tokenPost"><div class="e-empty">Loading…</div></div>
+    <div class="e-cta">
+      <button class="btn quiet wide" type="button" id="tOwn">Launch my own token</button>
+    </div>
   </section>
 
   <!-- lancement -->
-  <form class="e-card" id="composer" novalidate>
-    <div class="e-head">
-      <div class="coin" id="coin" style="--s:40px;--h:220">$</div>
-      <div><h1>Launch your token</h1><div class="mute" style="font-size:13px">On Base, gas on us.</div></div>
-    </div>
-    <div class="e-pair">
-      <label class="field"><span>Name</span><input class="input" id="name" maxlength="32" autocomplete="off" placeholder="Moon Cat"></label>
-      <label class="field"><span>Ticker</span><input class="input ticker-input" id="symbol" maxlength="10" autocomplete="off" placeholder="MCAT"></label>
-    </div>
-    <label class="field"><span>Pair with</span>
-      <select class="input" id="pair"><option>ETH</option></select>
-    </label>
-    <label class="field"><span>Description <small>(optional)</small></span>
-      <textarea class="input" id="description" maxlength="280" placeholder="In one line, why this token?"></textarea>
-    </label>
-    <div class="upload">
-      <label class="btn quiet small" for="file">Add a logo</label>
-      <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp">
-      <span class="mute" id="fileInfo" style="font-size:12px">1 MB max.</span>
-    </div>
-    <div class="notice" id="msg" role="alert" hidden></div>
-    <button class="btn wide" type="submit" id="launchBtn">Launch on Base</button>
-    <div class="mute" id="quota" style="font-size:12px;text-align:center"></div>
-  </form>
+  <section class="e-pane" id="pane-launch">
+    <form class="e-compose" id="composer" novalidate>
+      <div class="e-row">
+        <label class="e-prev" id="prev" title="Add a logo (1 MB max)">
+          <span class="e-art" id="prevArt"></span>
+          <span class="e-cam" id="cam"></span>
+          <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Add a logo">
+        </label>
+        <div class="e-fields">
+          <input class="e-name" id="name" maxlength="32" autocomplete="off" placeholder="What are you launching?" aria-label="Token name">
+          <div class="e-line">
+            <label class="e-tick"><b>$</b><input id="symbol" maxlength="10" autocomplete="off" placeholder="TICKER" aria-label="Ticker"></label>
+            <select class="e-pair" id="pair" aria-label="Pair with"><option>ETH</option></select>
+          </div>
+          <p class="e-hint" id="pairHint">Tap the square to add a logo.</p>
+        </div>
+      </div>
+      <textarea class="e-desc" id="description" maxlength="280" placeholder="Say something about it (optional)" aria-label="Description"></textarea>
+      <div class="notice" id="msg" role="alert" hidden></div>
+      <div class="e-bar">
+        <span class="e-quota" id="quota">Gas is on us.</span>
+        <button class="btn" type="submit" id="launchBtn">Launch</button>
+      </div>
+    </form>
 
-  <section class="e-card" id="done" hidden>
-    <h1 style="font:800 22px/1.1 var(--display);margin:0" id="doneTitle"></h1>
-    <p class="mute" style="margin:0">Share it: every trade earns you a cut of the fees.</p>
-    <a class="btn wide" id="doneShare" target="_blank" rel="noopener"></a>
-    <a class="btn quiet wide" id="donePage" target="_blank" rel="noopener">View token page</a>
+    <div class="e-done" id="done" hidden>
+      <div class="e-prev" id="doneArt"></div>
+      <h2 id="doneTitle"></h2>
+      <p class="mute">Share it: you earn <span data-fee-share>half</span> of the trading fees.</p>
+      <div class="btns">
+        <a class="btn wide" id="doneShare"></a>
+        <a class="btn quiet wide" id="donePage">View token page</a>
+        <button class="btn quiet wide" type="button" id="doneAgain">Launch another</button>
+      </div>
+    </div>
+
+    <div class="e-sub"><b>Just launched</b><a href="/explore">See all</a></div>
+    <div id="recent"></div>
+    <div class="e-foot">Speculative tokens: only put in what you can afford to lose.</div>
   </section>
 
-  <section class="e-card" id="recentCard">
-    <div style="font-weight:700">Just launched</div>
-    <div class="e-list" id="recent"><span class="mute">Loading…</span></div>
+  <!-- fils -->
+  <section class="e-pane" id="pane-feed" hidden>
+    <div id="feed"></div>
+    <div class="e-foot"><a href="/explore" style="color:var(--blue)">See everything on XLaunch</a></div>
   </section>
-
-  <div class="e-foot">Speculative tokens: only put in what you can afford to lose.</div>
-</div>
+</main>
 </body>
 </html>
