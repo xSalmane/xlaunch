@@ -9,7 +9,9 @@ import { publicClient, sqrtToPrice } from "./chain.js";
 const SWAP = parseAbiItem(
   "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)"
 );
-const CHUNK = 2_000n; // blocs par requête getLogs
+// blocs par requête getLogs : beaucoup de RPC publics plafonnent la plage (ex. 200 sur sepolia.base.org).
+// On démarre à INDEXER_BLOCK_RANGE et on s'aligne automatiquement sur la limite annoncée par le RPC.
+let chunk = BigInt(process.env.INDEXER_BLOCK_RANGE ?? 2_000);
 const POOLS_PER_QUERY = 100;
 const INTERVAL_MS = Number(process.env.INDEXER_INTERVAL_MS ?? 3000);
 
@@ -54,19 +56,40 @@ async function store(logs: SwapLog[]) {
   db.transaction(() => rows.forEach((r) => insert.run(...r)))();
 }
 
+/** plage maximale annoncée dans l'erreur du RPC ("limited to a 200 range", "range of 10000 blocks"…) */
+function rangeLimit(e: unknown): bigint | null {
+  const msg = String((e as Error)?.message ?? e);
+  if (!/limit|range|too many|exceed/i.test(msg)) return null;
+  const m = msg.match(/(\d{2,6})\s*(?:-?\s*block)?\s*range|range\s*(?:of|is)?\s*(\d{2,6})/i);
+  const n = m ? BigInt(m[1] ?? m[2]) : null;
+  return n && n < chunk ? n : chunk > 50n ? chunk / 2n : null;
+}
+
+async function getLogsAdaptive(pools: Address[], from: bigint, to: bigint) {
+  for (;;) {
+    try {
+      return await publicClient.getLogs({ address: pools, event: SWAP, fromBlock: from, toBlock: to, strict: true });
+    } catch (e) {
+      const limit = rangeLimit(e);
+      if (!limit || to - from + 1n <= limit) throw e;
+      chunk = limit;
+      console.log(`indexer : plage getLogs réduite à ${chunk} blocs (limite du RPC)`);
+      return null; // l'appelant redécoupe avec la nouvelle taille
+    }
+  }
+}
+
 async function scan(pools: string[], from: bigint, to: bigint) {
-  for (let start = from; start <= to; start += CHUNK) {
-    const end = start + CHUNK - 1n > to ? to : start + CHUNK - 1n;
+  let start = from;
+  while (start <= to) {
+    const end = start + chunk - 1n > to ? to : start + chunk - 1n;
+    let ok = true;
     for (let i = 0; i < pools.length; i += POOLS_PER_QUERY) {
-      const logs = await publicClient.getLogs({
-        address: pools.slice(i, i + POOLS_PER_QUERY) as Address[],
-        event: SWAP,
-        fromBlock: start,
-        toBlock: end,
-        strict: true,
-      });
+      const logs = await getLogsAdaptive(pools.slice(i, i + POOLS_PER_QUERY) as Address[], start, end);
+      if (logs === null) { ok = false; break; }
       await store(logs as SwapLog[]);
     }
+    if (ok) start = end + 1n;
   }
 }
 
