@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,23 +11,26 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <style>
-  /* X affiche la carte dans une boîte d'environ 400×400 : tout tient sans défiler, en plein écran sombre. */
-  :root { --grad: #0000ff; --glass: rgb(255 255 255 / 0.08); --glass-line: rgb(255 255 255 / 0.14); }
+  /* X affiche la carte dans une boîte d'environ 400×400 : tout tient sans défiler.
+     Toute la carte est une rampe de lancement : bleu Base quadrillé comme un graphique de trading. */
+  :root { --glass: rgb(255 255 255 / 0.14); --glass-line: rgb(255 255 255 / 0.22); }
   html, body { height: 100%; }
-  body { display: flex; flex-direction: column; overflow: hidden; font-size: 14px; background: #0a0b0d; }
+  body { display: flex; flex-direction: column; overflow: hidden; font-size: 14px; color: #fff; background-color: #0000ff;
+    background-image: linear-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
+    background-size: 34px 34px; background-position: -1px -1px; }
 
   /* ---------------------------------------------------------------- en-tête */
   .hd { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px; position: relative; z-index: 3; }
   .hd .brand { padding: 4px; gap: 7px; font-size: 17px; color: #fff; }
   .hd .brand:hover { background: none; }
-  .hd .brand-mark { width: 20px; height: 20px; box-shadow: inset 0 0 0 4px #0a0b0d, 0 0 0 2px #0000ff; background: #0000ff; }
-  .seg { --i: 0; position: relative; display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; max-width: 230px; margin: 0 auto; padding: 3px; border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--glass-line); }
+  .hd .brand-mark { width: 20px; height: 20px; background: #fff; box-shadow: inset 0 0 0 4px #0000ff, 0 0 0 2px #fff; }
+  .seg { --i: 0; position: relative; display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; max-width: 230px; margin: 0 auto; padding: 3px; border-radius: 999px; background: rgb(0 0 120 / 0.35); box-shadow: inset 0 0 0 1px var(--glass-line); }
   .seg::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 999px; background: #fff; transform: translateX(calc(var(--i) * 100%)); transition: transform 0.3s cubic-bezier(.2,.9,.2,1), opacity 0.2s; }
   .seg.none::before { opacity: 0; }
-  .seg button { position: relative; z-index: 1; border: 0; background: none; color: rgb(255 255 255 / 0.75); font-weight: 700; font-size: 13px; padding: 6px 4px; cursor: pointer; border-radius: 999px; white-space: nowrap; transition: color 0.2s; }
-  .seg button[aria-selected="true"] { color: #0a0b0d; }
+  .seg button { position: relative; z-index: 1; border: 0; background: none; color: rgb(255 255 255 / 0.85); font-weight: 700; font-size: 13px; padding: 6px 4px; cursor: pointer; border-radius: 999px; white-space: nowrap; transition: color 0.2s; }
+  .seg button[aria-selected="true"] { color: #0000ff; }
   .hd .auth .who { width: auto; padding: 0; }
-  .hd .auth .who img, .hd .auth .avatar-ph { width: 30px; height: 30px; box-shadow: 0 0 0 2px #0a0b0d, 0 0 0 3.5px #3c8aff; }
+  .hd .auth .who img, .hd .auth .avatar-ph { width: 30px; height: 30px; box-shadow: 0 0 0 2px #0000ff, 0 0 0 3.5px #fff; }
   .hd .auth .who-txt, .hd .auth .who-out { display: none; }
   .hd .auth .btn { width: auto; padding: 6px 11px; font-size: 13px; gap: 6px; background: #fff; color: #0a0b0d; }
   .hd .auth .btn .lbl { font-size: 0; }
@@ -36,51 +39,81 @@
   .main { flex: 1; min-height: 0; position: relative; }
   .view { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ---------------------------------------------------------------- lancement : couverture qui flotte au-dessus du formulaire */
-  .stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; padding: 4px 0 10px; overflow: hidden; }
-  .stage-bg { position: absolute; inset: -40px; opacity: 0.5; pointer-events: none; filter: blur(34px) saturate(1.5); transition: opacity 0.4s; }
-  .stage-bg > svg, .stage-bg > img { width: 100%; height: 100%; object-fit: cover; }
-  .cover { position: relative; height: 100%; max-height: 150px; aspect-ratio: 1; border-radius: 22px; overflow: hidden; cursor: pointer; box-shadow: 0 14px 40px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.18); transform: rotate(-4deg); transition: transform 0.3s cubic-bezier(.2,.9,.2,1); }
-  .cover:hover { transform: rotate(0) scale(1.03); }
-  .cover .e-art, .cover .e-art > svg, .cover .e-art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-  .cover input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .cover-cam { position: absolute; right: 7px; bottom: 7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgb(0 0 0 / 0.6); color: #fff; pointer-events: none; }
-  .cover-cam svg.i { width: 15px; height: 15px; }
-  .chip-test { display: none; position: absolute; top: 6px; right: 10px; z-index: 2; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; color: #fff; background: rgb(0 0 0 / 0.45); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25); backdrop-filter: blur(6px); }
+  /* ---------------------------------------------------------------- le ciel : les vols des derniers tokens, ta pièce sur la rampe */
+  .sky { flex: 1; min-height: 70px; position: relative; overflow: hidden; }
+  .sky svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .f-old { fill: none; stroke: #3c8aff; stroke-width: 1.6; stroke-linecap: round; }
+  .f-node { fill: #3c8aff; }
+  .f-tag { fill: #fff; fill-opacity: 0.6; font: 700 10.5px var(--text); }
+  .f-plan { fill: none; stroke: #fff; stroke-opacity: 0.55; stroke-width: 1.6; stroke-dasharray: 3 7; stroke-linecap: round; }
+  .f-live { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .f-glow { fill: none; stroke: #fff; stroke-opacity: 0.22; stroke-width: 12; stroke-linecap: round; }
+  .f-spark { fill: #fff; }
+  .f-ring { fill: none; stroke: #fff; }
+  .pad { position: absolute; left: 16px; bottom: 6px; width: 70px; height: 12px; border-radius: 50%; background: rgb(0 0 120 / 0.45); }
+  .pad-coin { position: absolute; left: 0; top: 0; z-index: 2; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; overflow: hidden; cursor: pointer; background: #fff; box-shadow: 0 0 0 3px #fff, 0 8px 20px rgb(0 0 60 / 0.5); will-change: transform; }
+  .pad-coin .e-art, .pad-coin .e-art > svg, .pad-coin .e-art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pad-coin input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .pad-cam { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #0a0b0d; color: #fff; pointer-events: none; box-shadow: 0 0 0 2px #fff; }
+  .pad-cam svg.i { width: 12px; height: 12px; }
+  .flying .pad-cam { display: none; }
+  .sky-pin { position: absolute; left: 0; top: 0; z-index: 3; padding: 6px 10px; border-radius: 10px; background: #fff; color: #0a0b0d; white-space: nowrap; opacity: 0; transform: translate(calc(-100% - 34px), -50%) scale(0.9); transform-origin: right center; transition: opacity 0.3s, transform 0.4s cubic-bezier(.2,.9,.2,1); }
+  .sky-pin.on { opacity: 1; transform: translate(calc(-100% - 42px), -50%) scale(1); }
+  .sky-pin b { display: block; font: 700 16px/1.1 var(--display); letter-spacing: -0.02em; }
+  .sky-pin span { font-size: 11.5px; color: #5b616e; }
+  .sky-pin::after { content: ""; position: absolute; top: 50%; right: -12px; width: 12px; height: 2px; margin-top: -1px; background: #fff; }
+  .sky-hint { position: absolute; left: 84px; bottom: 12px; font-size: 12px; color: rgb(255 255 255 / 0.75); pointer-events: none; transition: opacity 0.3s; }
+  .flying .sky-hint { opacity: 0; }
+  .chip-test { display: none; position: absolute; top: 6px; left: 12px; z-index: 2; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; color: #0000ff; background: #fff; }
   body[data-chain="testnet"] .chip-test { display: inline-block; }
 
-  .panel { flex: none; display: grid; gap: 7px; padding: 12px; margin: 0 8px 8px; border-radius: 20px; background: rgb(255 255 255 / 0.06); box-shadow: inset 0 0 0 1px var(--glass-line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: relative; z-index: 1; }
-  .p-name { border: 0; background: none; outline: none; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; padding: 0 2px; width: 100%; }
-  .p-name::placeholder, .p-desc::placeholder, .p-tick input::placeholder { color: rgb(255 255 255 / 0.45); }
-  .p-row { display: flex; gap: 6px; }
-  .p-tick { flex: 1; min-width: 0; display: flex; align-items: center; padding: 0 4px 0 11px; border-radius: 12px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--glass-line); }
-  .p-tick b { color: rgb(255 255 255 / 0.55); }
-  .p-tick input { border: 0; background: none; outline: none; color: #fff; width: 100%; min-width: 0; text-transform: uppercase; font-weight: 800; padding: 8px 4px; }
-  .p-pair { flex: 1.1; min-width: 0; border: 0; border-radius: 12px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--glass-line); color: #fff; font-weight: 700; font-size: 13px; padding: 8px 9px; cursor: pointer; }
-  .p-pair option, .p-pair optgroup { background: #101828; color: #fff; }
-  .p-desc { border: 0; border-radius: 12px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--glass-line); outline: none; color: #fff; padding: 8px 11px; font-size: 13.5px; width: 100%; }
-  .p-tick:focus-within, .p-pair:focus, .p-desc:focus { box-shadow: inset 0 0 0 1.5px #3c8aff; }
-  .p-go { border: 0; border-radius: 14px; padding: 11px; font: 800 15px/1 var(--text); color: #fff; background: #0000ff; cursor: pointer; transition: transform 0.1s, background-position 0.5s, opacity 0.2s; }
-  .p-go:hover { background: #2b2bff; }
-  .p-go:active { transform: scale(0.98); }
-  .p-go:disabled { opacity: 0.55; cursor: not-allowed; }
-  .p-quota { text-align: center; font-size: 11.5px; color: rgb(255 255 255 / 0.55); }
-  .panel .notice { padding: 7px 10px; font-size: 12.5px; }
+  /* ---------------------------------------------------------------- le composer, façon post X */
+  .cmp { flex: none; position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; margin: 0 8px 8px; padding: 11px 12px 10px; border-radius: 18px; background: #fff; color: #0a0b0d; box-shadow: 0 16px 34px -14px rgb(0 0 60 / 0.6); }
+  .cmp-top { display: flex; align-items: center; gap: 9px; }
+  .cmp-av { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: none; background: #0a0b0d; display: grid; place-items: center; }
+  .cmp-av img { width: 100%; height: 100%; object-fit: cover; }
+  .cmp-av .x-logo { width: 14px; height: 14px; fill: #fff; }
+  .cmp-name { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: #0a0b0d; font: 600 19px/1.2 var(--text); padding: 2px 0; }
+  .cmp-name::placeholder, .cmp-vibe::placeholder, .cmp-tick input::placeholder { color: #8b919d; }
+  .cmp-row { display: flex; gap: 6px; }
+  .cmp-tick { flex: 1; min-width: 0; width: 0; display: flex; align-items: center; padding: 0 4px 0 11px; border-radius: 999px; background: #eef0f3; }
+  .cmp-tick b { color: #5b616e; }
+  .cmp-tick input { border: 0; background: none; outline: none; color: #0a0b0d; width: 100%; min-width: 0; text-transform: uppercase; font-weight: 800; padding: 7px 4px; }
+  .cmp-pair { flex: 1.05; min-width: 0; width: 0; border: 0; border-radius: 999px; background: #eef0f3; color: #0a0b0d; font-weight: 700; font-size: 13px; padding: 7px 10px; cursor: pointer; }
+  .cmp-vibe { border: 0; outline: none; background: none; color: #0a0b0d; padding: 2px 2px; font-size: 14px; width: 100%; }
+  .cmp-tick:focus-within, .cmp-pair:focus { box-shadow: inset 0 0 0 1.5px #0000ff; }
+  .cmp-bar { display: flex; align-items: center; gap: 8px; border-top: 1px solid #dee1e7; padding-top: 8px; }
+  .cmp-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #0000ff; cursor: pointer; flex: none; }
+  .cmp-ic:hover { background: #ebebff; }
+  .cmp-ic svg.i { width: 19px; height: 19px; }
+  .cmp-quota { flex: 1; min-width: 0; font-size: 11.5px; color: #5b616e; line-height: 1.25; }
+  .cmp-go { border: 0; border-radius: 999px; padding: 9px 18px; background: #0a0b0d; color: #fff; font: 800 14px/1 var(--text); cursor: pointer; white-space: nowrap; transition: transform 0.12s, background 0.2s; }
+  .cmp-go:hover { background: #0000ff; }
+  .cmp-go:active { transform: scale(0.94); }
+  .cmp-go:disabled { opacity: 0.6; cursor: not-allowed; }
+  .cmp .notice { padding: 6px 10px; font-size: 12.5px; }
+  .cmp .notice.err { background: #fff0ed; color: #e0300f; }
 
-  .done { text-align: center; gap: 8px; }
-  .done h2 { margin: 0; font: 800 21px/1.15 var(--display); letter-spacing: -0.02em; color: #fff; }
-  .done h2 span { color: #3c8aff; }
-  .done p { margin: 0; font-size: 13px; color: rgb(255 255 255 / 0.65); }
-  .done-btns { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; }
-  .g-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px; border-radius: 13px; font-weight: 800; font-size: 14px; border: 0; cursor: pointer; }
-  .g-btn.white { background: #fff; color: #0a0b0d; }
-  .g-btn.glass { background: var(--glass); color: #fff; box-shadow: inset 0 0 0 1px var(--glass-line); }
-  .linkish { border: 0; background: none; color: rgb(255 255 255 / 0.6); font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .done { text-align: left; gap: 8px; }
+  .done h2 { margin: 0; font: 800 21px/1.15 var(--display); letter-spacing: -0.02em; }
+  .done h2 span { color: #0000ff; }
+  .done p { margin: 0; font-size: 13px; color: #5b616e; }
+  .done-btns { display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px; }
+  .g-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px; border-radius: 999px; font-weight: 800; font-size: 14px; border: 0; cursor: pointer; }
+  .g-btn .x-logo { fill: currentColor; width: 14px; height: 14px; }
+  .g-btn.ink { background: #0a0b0d; color: #fff; }
+  .g-btn.ink:hover { background: #0000ff; }
+  .g-btn.line { background: #fff; color: #0a0b0d; box-shadow: inset 0 0 0 1px #dee1e7; }
+  .linkish { justify-self: start; border: 0; background: none; color: #5b616e; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 0; }
+
+  /* boutons pleins réutilisés ailleurs (fin de fil, carte d'un token partagé) */
+  .p-go { border: 0; border-radius: 999px; padding: 11px 18px; font: 800 15px/1 var(--text); color: #0000ff; background: #fff; cursor: pointer; }
+  .p-go:hover { background: #ebebff; }
 
   /* ---------------------------------------------------------------- fils façon reels : une carte par écran, on glisse */
   .reel { flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; padding: 2px 8px 8px; scrollbar-width: none; overscroll-behavior: contain; }
   .reel::-webkit-scrollbar { display: none; }
-  .slide { position: relative; height: calc(100% - 26px); margin-bottom: 8px; border-radius: 20px; overflow: hidden; scroll-snap-align: start; scroll-margin-top: 2px; background: #101828; isolation: isolate; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08); }
+  .slide { position: relative; height: calc(100% - 26px); margin-bottom: 8px; border-radius: 20px; overflow: hidden; scroll-snap-align: start; scroll-margin-top: 2px; background: #00008a; isolation: isolate; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08); }
   .reel.single .slide { height: 100%; margin: 0; }
   .s-media { position: absolute; inset: 0; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   .s-media > svg, .s-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -91,7 +124,7 @@
   .s-btn { display: grid; justify-items: center; gap: 1px; border: 0; background: none; color: #fff; cursor: pointer; font-size: 11.5px; font-weight: 700; padding: 0; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.5)); }
   .s-btn svg.i { width: 27px; height: 27px; transition: transform 0.15s; }
   .s-btn:hover svg.i { transform: scale(1.12); }
-  .s-btn.like.on { color: #ff2d55; }
+  .s-btn.like.on { color: #fc401f; }
   .s-btn.like.on svg.i { fill: currentColor; }
   .s-btn.like.on span { color: #fff; }
   .s-info { position: absolute; left: 12px; right: 58px; bottom: 12px; color: #fff; display: grid; gap: 4px; pointer-events: none; }
@@ -106,26 +139,27 @@
   .s-desc { margin: 0; font-size: 12.5px; color: rgb(255 255 255 / 0.85); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
   .s-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
   .s-pill { display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.5); backdrop-filter: blur(8px); font-size: 12.5px; font-weight: 700; }
-  .s-pill .up { color: #4dffb0; } .s-pill .down { color: #ff8a96; } .s-pill .mute { color: #dbe3f0; }
+  .s-pill .up { color: #b6f569; } .s-pill .down { color: #fea8cd; } .s-pill .mute { color: #dbe3f0; }
   .s-buy { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; background: #fff; color: #0a0b0d; font-size: 12.5px; font-weight: 800; }
   .s-buy svg.i { width: 15px; height: 15px; }
   .s-row .pairtag { background: rgb(255 255 255 / 0.14); border-color: transparent; color: #fff; font-size: 11.5px; }
   .slide .ig-burst { z-index: 2; }
-  .reel-end { height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; color: rgb(255 255 255 / 0.7); scroll-snap-align: start; }
+  .reel-end { height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; color: rgb(255 255 255 / 0.8); scroll-snap-align: start; }
   .reel-end b { color: #fff; font-size: 17px; }
   .cta { flex: none; margin: 8px; }
   .cta .p-go { width: 100%; }
 
   @media (prefers-reduced-motion: no-preference) {
-    .cover.bump { animation: coverBump 0.3s ease-out; }
-    @keyframes coverBump { 50% { transform: rotate(-1deg) scale(1.06); } }
+    .f-plan { animation: march 1.2s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -20; } }
     .s-btn.like.pop svg.i { animation: pop 0.45s cubic-bezier(.2,.9,.2,1); }
     .slide.enter { animation: rise 0.45s cubic-bezier(.2,.9,.2,1) both; }
     @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
   }
   @media (max-width: 439px) { .hd .brand-txt { display: none; } }
-  @media (max-height: 380px) { .p-desc, .p-quota { display: none; } }
-  @media (max-height: 330px) { .stage { display: none; } }
+  @media (max-width: 360px) { .cmp-name { font-size: 17px; } .cmp-go { padding: 9px 14px; } .sky-hint { display: none; } }
+  @media (max-height: 390px) { .cmp-vibe { display: none; } }
+  @media (max-height: 330px) { .cmp-quota { display: none; } .sky-hint { display: none; } }
 </style>
 <script src="/static/app.js" defer></script>
 <script src="/static/embed.js" defer></script>
@@ -142,36 +176,42 @@
 </header>
 
 <main class="main">
-  <!-- lancement -->
+  <!-- lancement : ta pièce attend sur la rampe, le composer est un post X -->
   <section class="view" id="vLaunch">
-    <div class="stage-bg" id="stageBg"></div>
-    <div class="stage">
-      <span class="chip-test">Testnet</span>
-      <label class="cover" id="cover" title="Add a logo (1 MB max)">
+    <div class="sky" id="sky">
+      <svg id="skySvg" aria-hidden="true"><g id="fOld"></g><path class="f-plan" id="fPlan"/><path class="f-glow" id="fGlow"/><path class="f-live" id="fLive"/><g id="fFx"></g></svg>
+      <span class="pad" aria-hidden="true"></span>
+      <label class="pad-coin" id="padCoin" title="Add a logo (1 MB max)">
         <span class="e-art" id="prevArt"></span>
-        <span class="cover-cam" id="cam"></span>
+        <span class="pad-cam" id="cam"></span>
         <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Add a logo">
       </label>
+      <span class="sky-hint" id="skyHint">Your coin, ready for launch</span>
+      <a class="sky-pin" id="skyPin"></a>
+      <span class="chip-test">Testnet</span>
     </div>
 
-    <form class="panel" id="composer" novalidate>
-      <input class="p-name" id="name" maxlength="32" autocomplete="off" placeholder="Name your token" aria-label="Token name">
-      <div class="p-row">
-        <label class="p-tick"><b>$</b><input id="symbol" maxlength="10" autocomplete="off" placeholder="TICKER" aria-label="Ticker"></label>
-        <select class="p-pair" id="pair" aria-label="Pair with"><option value="">Pair: ETH</option></select>
+    <form class="cmp" id="composer" novalidate>
+      <div class="cmp-top"><span class="cmp-av" id="cmpAv"></span><input class="cmp-name" id="name" maxlength="32" autocomplete="off" placeholder="What are you launching?" aria-label="Token name"></div>
+      <div class="cmp-row">
+        <label class="cmp-tick"><b>$</b><input id="symbol" maxlength="10" autocomplete="off" placeholder="TICKER" aria-label="Ticker"></label>
+        <select class="cmp-pair" id="pair" aria-label="Pair with"><option value="">Pair: ETH</option></select>
       </div>
-      <input class="p-desc" id="description" maxlength="280" autocomplete="off" placeholder="Add a vibe (optional)" aria-label="Description">
+      <input class="cmp-vibe" id="description" maxlength="280" autocomplete="off" placeholder="Add a vibe (optional)" aria-label="Description">
       <div class="notice" id="msg" role="alert" hidden></div>
-      <button class="p-go" type="submit" id="launchBtn">Launch on Base</button>
-      <div class="p-quota" id="quota">Gas is on us</div>
+      <div class="cmp-bar">
+        <label class="cmp-ic" for="file" title="Add a logo" id="logoBtn"></label>
+        <span class="cmp-quota" id="quota">Gas is on us</span>
+        <button class="cmp-go" type="submit" id="launchBtn">Launch</button>
+      </div>
     </form>
 
-    <div class="panel done" id="done" hidden>
-      <h2><span id="doneSym"></span> is live</h2>
-      <p>You earn <span data-fee-share>half</span> of every trading fee.</p>
+    <div class="cmp done" id="done" hidden>
+      <h2><span id="doneSym"></span> is live on Base</h2>
+      <p>You earn <span data-fee-share>half</span> of every trading fee. Share it to get it moving.</p>
       <div class="done-btns">
-        <a class="g-btn white" id="doneShare"></a>
-        <a class="g-btn glass" id="donePage">View</a>
+        <a class="g-btn ink" id="doneShare"></a>
+        <a class="g-btn line" id="donePage">View token</a>
       </div>
       <button class="linkish" type="button" id="doneAgain">Launch another</button>
     </div>
