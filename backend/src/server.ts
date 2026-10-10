@@ -39,7 +39,20 @@ app.use((req, res, next) => {
 app.use(authRouter);
 
 // ------------------------------------------------------------------ pages
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/static") && !req.path.startsWith("/u/") && !req.path.startsWith("/api")) res.setHeader("Cache-Control", "no-cache");
+  next();
+});
 const templates = new Map<string, string>();
+// Version des fichiers statiques : change à chaque déploiement, donc un navigateur (ou la carte X)
+// ne mélange jamais une page récente avec un ancien script gardé en cache.
+const ASSET_V = (() => {
+  const h = crypto.createHash("sha1");
+  for (const f of fs.readdirSync(publicDir).sort()) if (/\.(js|css)$/.test(f)) h.update(f).update(fs.readFileSync(path.join(publicDir, f)));
+  return h.digest("hex").slice(0, 10);
+})();
+const versioned = (html: string) =>
+  html.replace(/(["'])\/static\/([\w.-]+\.(?:js|css))\1/g, (_m, q, f) => `${q}/static/${f}?v=${process.env.NODE_ENV === "production" ? ASSET_V : Date.now()}${q}`);
 function render(file: string, meta: { title: string; description: string; player?: string }) {
   let html = templates.get(file);
   if (!html || process.env.NODE_ENV !== "production") {
@@ -66,7 +79,7 @@ function render(file: string, meta: { title: string; description: string; player
         ]
       : [`<meta name="twitter:card" content="summary_large_image">`]),
   ].join("\n");
-  return html.replace("<!--META-->", tags);
+  return versioned(html.replace("<!--META-->", tags));
 }
 
 app.get("/", (_req, res) => {
@@ -91,7 +104,11 @@ app.get("/t/:token", (req, res) => {
     player: `${config.publicUrl}/embed?token=${row.token}`,
   }));
 });
-app.get("/embed", (_req, res) => res.sendFile(path.join(publicDir, "embed.html")));
+app.get("/embed", (_req, res) => {
+  let html = templates.get("embed.html");
+  if (!html || process.env.NODE_ENV !== "production") templates.set("embed.html", (html = fs.readFileSync(path.join(publicDir, "embed.html"), "utf8")));
+  res.type("html").send(versioned(html));
+});
 app.use("/static", express.static(publicDir, { maxAge: process.env.NODE_ENV === "production" ? "1h" : 0 }));
 app.use("/u", express.static(uploadDir, {
   maxAge: "30d", immutable: true,
