@@ -281,7 +281,7 @@
       card.ownerDocument.querySelectorAll(`[data-token="${card.dataset.token}"]`).forEach((c) => {
         const b = c.querySelector("[data-like]"), l = c.querySelector("[data-likes]");
         b?.classList.toggle("on", on); b?.setAttribute("aria-pressed", String(on));
-        if (l) { l.dataset.n = n; l.textContent = likesText(n); }
+        if (l) { l.dataset.n = n; l.textContent = l.hasAttribute("data-short") ? count(n) : likesText(n); }
       });
     };
     const n0 = Number(box?.dataset.n ?? 0);
@@ -429,6 +429,8 @@
     try {
       const c = await api("/api/config");
       if (c.chain === "base") return;
+      // carte du tweet : pas de bandeau, une pastille discrète gérée par la page
+      if (document.body.hasAttribute("data-compact")) { document.body.dataset.chain = "testnet"; return; }
       const el = document.createElement("div");
       el.className = "testnet";
       el.textContent = document.body.hasAttribute("data-compact")
