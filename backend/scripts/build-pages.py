@@ -14,6 +14,7 @@ P = {
  "share": '<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
  "buy": '<path d="M4 7h16l-1.5 9.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
  "copy": '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+ "star": '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
  "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
 }
 def i(name, cls=""):
@@ -189,14 +190,21 @@ ME = f'''    <div class="col-head">
             <span><b id="sTokens">0</b> tokens</span>
             <span><b id="sLikes">0</b> likes</span>
             <span><b id="sEarned">—</b> earned</span>
+            <span id="sSmartWrap" hidden><b id="sSmart">—</b> smart followers</span>
           </div>
           <div class="mute" id="pHandle"></div>
+          <button class="sf-line" type="button" id="sfLine" hidden></button>
         </div>
       </div>
       <div class="tabs ig-tabs" role="tablist">
         <button type="button" role="tab" aria-selected="true" data-tab="tokens"><span>{i("grid","sm")} Tokens</span></button>
-        <button type="button" role="tab" aria-selected="false" data-tab="gains"><span>{i("coins","sm")} Earnings</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="smart" id="tabSmartBtn" hidden><span>{i("star","sm")} Smart followers</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="gains" id="tabGainsBtn"><span>{i("coins","sm")} Earnings</span></button>
       </div>
+      <section id="tab-smart" hidden>
+        <div id="sfList"></div>
+        <p class="sf-foot mute">Smart followers are notable traders, founders, funds and KOLs, as indexed by <a href="https://www.frontrun.pro" target="_blank" rel="noopener">Frontrun</a>.</p>
+      </section>
       <section id="tab-tokens">
         <div id="mine" class="grid"></div>
         <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>

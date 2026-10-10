@@ -1,20 +1,22 @@
-// Profil / Mes gains : total gagné, séquestre, récupération, mes tokens, robinet de test
+// Profil : le sien (/me : tokens, smart followers, gains) ou celui d'un créateur (/p/pseudo : tokens, smart followers)
 document.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
   const { api, fmt } = XL;
   const ADDR = /^0x[a-fA-F0-9]{40}$/;
+  const pub = location.pathname.startsWith("/p/") ? decodeURIComponent(location.pathname.split("/")[2] || "").replace(/[^\w]/g, "") : null;
   let loaded = false;
 
   $("meLogin").innerHTML = `${XL.X_SVG} Sign in with X`;
   $("meLogin").onclick = () => XL.login().catch(() => {});
 
-  // onglets Tokens / Earnings (un lien /me#earnings ouvre directement les gains)
-  document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
-    document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
-    $("tab-gains").hidden = b.dataset.tab !== "gains";
-    $("tab-tokens").hidden = b.dataset.tab !== "tokens";
-  }));
-  if (location.hash === "#earnings") document.querySelector('[data-tab="gains"]').click();
+  // ------------------------------------------------------------ onglets (Tokens / Smart followers / Earnings)
+  function tab(name) {
+    document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === name)));
+    ["tokens", "smart", "gains"].forEach((t) => ($("tab-" + t).hidden = t !== name));
+    if (name === "smart") loadSmart();
+  }
+  document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => tab(b.dataset.tab)));
+  $("sfLine").addEventListener("click", () => { tab("smart"); $("tab-smart").scrollIntoView({ behavior: "smooth", block: "start" }); });
 
   function msg(text, kind = "err") {
     const m = $("claimMsg");
@@ -22,13 +24,107 @@ document.addEventListener("DOMContentLoaded", () => {
     m.className = "notice " + kind; m.innerHTML = text; m.hidden = false;
   }
 
+  function header({ handle, avatar }) {
+    $("pName").textContent = handle;
+    $("pHandle").textContent = `@${handle}`;
+    $("pX").href = `https://x.com/${encodeURIComponent(handle)}`;
+    $("pAvatar").innerHTML = avatar
+      ? `<img class="profile-avatar" src="${fmt.esc(avatar.replace("_normal", "_400x400"))}" alt="" referrerpolicy="no-referrer">`
+      : `<span class="profile-avatar sf-ph">${fmt.esc(handle[0]?.toUpperCase() ?? "?")}</span>`;
+    $("pAvatar").querySelector("img")?.addEventListener("error", (e) => {
+      const s = document.createElement("span"); s.className = "profile-avatar sf-ph"; s.textContent = handle[0]?.toUpperCase() ?? "?"; e.target.replaceWith(s);
+    });
+  }
+  function tokensGrid(tokens, own) {
+    $("mine").innerHTML = tokens.map((t) => XL.tile(t)).join("");
+    $("mineEmpty").hidden = !!tokens.length;
+    $("mineEmpty").innerHTML = own
+      ? `<b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div>`
+      : `<b>No tokens yet</b>@${fmt.esc(pub)} hasn't launched a token on XLaunch.`;
+    $("sTokens").textContent = tokens.length;
+    $("sTokens").nextSibling.textContent = tokens.length === 1 ? " token" : " tokens";
+    $("pSub").textContent = `${tokens.length} token${tokens.length === 1 ? "" : "s"} launched`;
+  }
+
+  // ------------------------------------------------------------ smart followers (Frontrun)
+  let smartFor = null, smart = null, smartErr = "";
+  const sfAvatar = (f, size) => f.avatar
+    ? `<img class="sf-av" src="${fmt.esc(f.avatar)}" alt="" referrerpolicy="no-referrer" loading="lazy" style="--s:${size}px" data-fallback="${fmt.esc(f.handle[0].toUpperCase())}">`
+    : `<span class="sf-av sf-ph" style="--s:${size}px">${fmt.esc(f.handle[0].toUpperCase())}</span>`;
+
+  async function fetchSmart(handle) {
+    if (smartFor === handle.toLowerCase()) return;
+    smartFor = handle.toLowerCase(); smart = null; smartErr = "";
+    $("sfLine").hidden = false;
+    $("sfLine").innerHTML = `<span class="sf-skel"></span><span class="mute">Loading smart followers…</span>`;
+    try {
+      const r = await api("/api/smart-followers/" + encodeURIComponent(handle));
+      if (!r.configured) { $("sfLine").hidden = true; return; }
+      smart = r;
+    } catch (e) { smartErr = e.message || "Smart followers are unavailable right now."; }
+    $("tabSmartBtn").hidden = false;
+    $("sSmartWrap").hidden = !smart;
+    if (smart) $("sSmart").textContent = fmt.count(smart.totalCount);
+    drawLine(handle);
+    if (!$("tab-smart").hidden) loadSmart();
+  }
+
+  function drawLine(handle) {
+    const el = $("sfLine");
+    if (!smart) { el.innerHTML = `<span class="mute">Smart followers unavailable right now</span>`; return; }
+    const top = smart.followers.slice(0, 3);
+    if (!top.length) { el.innerHTML = `<span class="mute">No smart followers yet</span>`; return; }
+    const names = top.slice(0, 2).map((f) => `<b>${fmt.esc(f.name)}</b>`);
+    const rest = smart.totalCount - names.length;
+    el.innerHTML = `<span class="sf-stack">${top.map((f) => sfAvatar(f, 22)).join("")}</span>
+      <span class="sf-txt">Followed by ${names.join(", ")}${rest > 0 ? ` and <b>${fmt.count(rest)} other smart account${rest === 1 ? "" : "s"}</b>` : ""}</span>`;
+    el.title = `Smart followers of @${handle}, via Frontrun`;
+  }
+
+  function loadSmart() {
+    const box = $("sfList");
+    if (smartErr) { box.innerHTML = `<div class="feed-empty"><b>Unavailable right now</b>${fmt.esc(smartErr)}</div>`; return; }
+    if (!smart) { box.innerHTML = `<div class="feed-empty">Loading…</div>`; return; }
+    if (!smart.followers.length) { box.innerHTML = `<div class="feed-empty"><b>No smart followers yet</b>None of the accounts Frontrun tracks follows this profile.</div>`; return; }
+    const more = smart.totalCount - smart.followers.length;
+    box.innerHTML = smart.followers.map((f, n) => `<a class="sf-row" href="https://x.com/${fmt.esc(f.handle)}" target="_blank" rel="noopener" style="--d:${Math.min(n, 12) * 30}ms">
+        ${sfAvatar(f, 44)}
+        <span class="sf-main"><span class="sf-name"><b>${fmt.esc(f.name)}</b>${f.label ? `<span class="sf-tag">${fmt.esc(f.label)}</span>` : ""}</span>
+          <span class="mute">@${fmt.esc(f.handle)}</span></span>
+        <span class="sf-num"><b>${fmt.count(f.followers)}</b><span class="mute">followers</span></span>
+      </a>`).join("") + (more > 0 ? `<div class="sf-more mute">and ${fmt.count(more)} more</div>` : "");
+  }
+
+  // ------------------------------------------------------------ profil public d'un créateur
+  if (pub) {
+    $("tabGainsBtn").hidden = true;
+    $("loggedOut").hidden = true; $("loggedIn").hidden = false;
+    $("pTitle").textContent = `@${pub}`;
+    header({ handle: pub, avatar: "" });
+    const loadPub = async () => {
+      const p = await api("/api/profile/" + encodeURIComponent(pub));
+      if (!loaded) { loaded = true; header(p); $("pTitle").textContent = `@${p.handle}`; document.title = `@${p.handle} — XLaunch`; }
+      tokensGrid(p.tokens, false);
+      $("sLikes").textContent = fmt.count(p.likesReceived);
+      $("sLikes").nextSibling.textContent = p.likesReceived === 1 ? " like" : " likes";
+      $("sEarned").textContent = fmt.usd(p.earnedTotalUsd);
+    };
+    loadPub().catch((e) => { $("mine").innerHTML = ""; $("mineEmpty").hidden = false; $("mineEmpty").textContent = e.message; });
+    fetchSmart(pub);
+    setInterval(() => { if (!document.hidden) loadPub().catch(() => {}); }, 15000);
+    return;
+  }
+
+  // ------------------------------------------------------------ mon profil
+  if (location.hash === "#earnings") tab("gains");
+
   async function load() {
     const c = await api("/api/creator");
     $("earned").textContent = fmt.usd(c.earnedTotalUsd);
     $("sEarned").textContent = fmt.usd(c.earnedTotalUsd);
-    $("sTokens").textContent = c.tokens.length;
     $("sLikes").textContent = fmt.count(c.likesReceived ?? 0);
-    $("pSub").textContent = `${c.tokens.length} token${c.tokens.length === 1 ? "" : "s"} launched`;
+    $("sLikes").nextSibling.textContent = c.likesReceived === 1 ? " like" : " likes";
+    tokensGrid(c.tokens, true);
     const pending = c.escrow.filter((e) => e.amount !== "0");
     $("escrow").innerHTML = pending.map((e) => {
       const v = Number(BigInt(e.amount)) / 10 ** e.decimals;
@@ -41,8 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Launch a token to start earning trading fees.";
     if (c.boundWallet && !$("recipient").value) $("recipient").value = c.boundWallet;
     $("claimForm").hidden = !c.tokens.length;
-    $("mine").innerHTML = c.tokens.map((t) => XL.tile(t)).join("");
-    $("mineEmpty").hidden = !!c.tokens.length;
   }
 
   XL.onAuth((me) => {
@@ -53,18 +147,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (logged && !loaded) {
       loaded = true;
       $("pTitle").textContent = me.handle;
-      $("pName").textContent = me.handle;
-      $("pHandle").textContent = `@${me.handle}`;
-      $("pX").href = `https://x.com/${encodeURIComponent(me.handle)}`;
-      $("pAvatar").innerHTML = me.avatar
-        ? `<img class="profile-avatar" src="${fmt.esc(me.avatar.replace("_normal", "_400x400"))}" alt="" referrerpolicy="no-referrer">`
-        : `<span class="profile-avatar"></span>`;
-      $("pAvatar").querySelector("img")?.addEventListener("error", (e) => {
-        const s = document.createElement("span"); s.className = "profile-avatar"; e.target.replaceWith(s);
-      });
+      header(me);
       load().catch((e) => msg(fmt.esc(e.message)));
+      fetchSmart(me.handle);
     }
-    if (!logged) { loaded = false; $("pTitle").textContent = "Earnings"; $("pSub").textContent = ""; }
+    if (!logged) { loaded = false; smartFor = null; $("pTitle").textContent = "Earnings"; $("pSub").textContent = ""; }
   });
   if (!XL.isLogged()) $("loggedOut").hidden = false;
 

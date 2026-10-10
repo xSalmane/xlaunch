@@ -8,6 +8,7 @@ import { authRouter, requireAuth, softAuth, eligibility, DEV_LOGIN, type Session
 import { launchesRepo, claimsRepo, likesRepo } from "./db.js";
 import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps } from "./chain.js";
 import { listTokens, getToken, trades, chart, globalStats, activity } from "./market.js";
+import { smartFollowers, frontrunEnabled } from "./frontrun.js";
 import { initQuotes, getQuotes, quoteOf, mintTestStocks } from "./quotes.js";
 import { startIndexer } from "./indexer.js";
 
@@ -103,6 +104,11 @@ app.get("/t/:token", (req, res) => {
     description: row.description || `Launched by @${row.handle} on Base via XLaunch.`,
     player: `${config.publicUrl}/embed?token=${row.token}`,
   }));
+});
+// profil public d'un créateur (ses tokens, ses likes, ses smart followers)
+app.get("/p/:handle", (req, res) => {
+  const handle = String(req.params.handle).replace(/[^\w]/g, "").slice(0, 15);
+  res.type("html").send(render("me.html", { title: `@${handle} — XLaunch`, description: `Tokens launched by @${handle} on Base, and who follows them.` }));
 });
 app.get("/embed", (_req, res) => {
   let html = templates.get("embed.html");
@@ -313,6 +319,41 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
     res.status(500).json({ error: "The claim failed. Your earnings are still held in escrow, so you can try again." });
   } finally {
     claiming.delete(s.sub);
+  }
+});
+
+// ------------------------------------------------------------------ profils publics et smart followers (Frontrun)
+const HANDLE = /^\w{1,15}$/;
+app.get("/api/profile/:handle", softAuth, async (req, res) => {
+  const handle = String(req.params.handle).replace(/^@/, "");
+  if (!HANDLE.test(handle)) return res.status(400).json({ error: "Invalid X handle." });
+  const c = launchesRepo.creatorByHandle(handle);
+  const tokens = c ? markLiked(listTokens({ xId: c.x_id, limit: 100, creatorFeeBps: await creatorFeeBps() }), res.locals.session) : [];
+  res.json({
+    handle: c?.handle ?? handle,
+    avatar: c?.creator_avatar ?? "",
+    tokens,
+    likesReceived: c ? likesRepo.receivedBy(c.x_id) : 0,
+    earnedTotalUsd: tokens.reduce((a, t) => a + t.creatorFeesUsd, 0),
+    smartFollowers: frontrunEnabled(),
+  });
+});
+
+const sfRate = new Map<string, { n: number; t: number }>();
+app.get("/api/smart-followers/:handle", async (req, res) => {
+  const handle = String(req.params.handle).replace(/^@/, "");
+  if (!HANDLE.test(handle)) return res.status(400).json({ error: "Invalid X handle." });
+  if (!frontrunEnabled()) return res.json({ configured: false });
+  const ip = req.ip ?? "?";
+  const r = sfRate.get(ip), nowMs = Date.now();
+  if (r && nowMs - r.t < 60_000 && r.n >= 30) return res.status(429).json({ error: "Too many requests, try again in a minute." });
+  sfRate.set(ip, r && nowMs - r.t < 60_000 ? { n: r.n + 1, t: r.t } : { n: 1, t: nowMs });
+  try {
+    const data = await smartFollowers(handle);
+    res.setHeader("Cache-Control", "public, max-age=600");
+    res.json({ configured: true, ...data });
+  } catch (e) {
+    res.status(502).json({ configured: true, error: (e as Error).message });
   }
 });
 

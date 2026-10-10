@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <a class="s-btn" href="${share}" aria-label="Share on X">${XL.icon("share")}<span>Share</span></a>
       </div>
       <div class="s-info">
-        <div class="s-who">${XL.avatar(t.creatorAvatar, t.creator, 24)}<b>@${fmt.esc(t.creator)}</b><span class="t">· ${fmt.ago(t.createdAt)}</span></div>
+        <div class="s-who"><a class="s-who-link" href="/p/${fmt.esc(t.creator)}">${XL.avatar(t.creatorAvatar, t.creator, 24)}<b>@${fmt.esc(t.creator)}</b></a><span class="t">· ${fmt.ago(t.createdAt)}</span></div>
         <div class="s-sym">$${fmt.esc(t.symbol)} <small>${fmt.esc(t.name)}</small></div>
         ${t.description ? `<p class="s-desc">${fmt.esc(t.description)}</p>` : ""}
         <div class="s-row"><span class="s-pill">${pill(t)}</span>${XL.pair(t.quote)}<a class="s-buy" href="${fmt.esc(t.trade)}">${XL.icon("buy")}Buy</a></div>

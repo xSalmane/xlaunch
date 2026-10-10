@@ -136,6 +136,11 @@ export const launchesRepo = {
   byUser(xId: string): LaunchRow[] {
     return db.prepare(`SELECT * FROM launches WHERE x_id=? AND status='done' ORDER BY id DESC`).all(xId) as LaunchRow[];
   },
+  /** créateur par pseudo X (le plus récent lancement, pour l'avatar à jour) */
+  creatorByHandle(handle: string): { x_id: string; handle: string; creator_avatar: string } | undefined {
+    return db.prepare(`SELECT x_id, handle, creator_avatar FROM launches WHERE lower(handle)=lower(?) AND status='done' ORDER BY id DESC LIMIT 1`)
+      .get(handle) as { x_id: string; handle: string; creator_avatar: string } | undefined;
+  },
   byToken(token: string): LaunchRow | undefined {
     return db.prepare(`SELECT * FROM launches WHERE lower(token)=lower(?) AND status='done'`).get(token) as LaunchRow | undefined;
   },

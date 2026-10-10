@@ -234,8 +234,8 @@
     const f = flash("m:" + t.token, t.mcapUsd);
     return `<article class="ig${isNew ? " post-enter" : ""}" data-token="${esc(t.token)}">
       <header class="ig-head">
-        ${avatar(t.creatorAvatar, t.creator, 34)}
-        <div class="who-line"><b>@${esc(t.creator)}</b> <span class="mute">· ${ago(t.createdAt)}</span><br>
+        <a href="/p/${esc(t.creator)}" aria-label="@${esc(t.creator)}'s profile">${avatar(t.creatorAvatar, t.creator, 34)}</a>
+        <div class="who-line"><a class="who-link" href="/p/${esc(t.creator)}"><b>@${esc(t.creator)}</b></a> <span class="mute">· ${ago(t.createdAt)}</span><br>
           <span class="mute">launched $${esc(t.symbol)}, paired with</span> ${pair(t.quote)}</div>
         ${t.hot ? `<span class="hot" title="3+ likes in the last hour">🔥 Hot</span>` : ""}
       </header>
@@ -253,7 +253,7 @@
       </div>
       <div class="ig-likes" data-likes data-n="${t.likes}">${likesText(t.likes)}</div>
       <div class="ig-stats"><b>$${esc(t.symbol)}</b> ${esc(t.name)} <span class="mute">· ${count(t.trades)} trades · ${usd(t.creatorFeesUsd)} earned by the creator</span></div>
-      ${t.description ? `<p class="ig-caption"><b>@${esc(t.creator)}</b> ${esc(t.description)}</p>` : ""}
+      ${t.description ? `<p class="ig-caption"><a class="who-link" href="/p/${esc(t.creator)}"><b>@${esc(t.creator)}</b></a> ${esc(t.description)}</p>` : ""}
       <a class="ig-more" href="${href}">View chart and ${t.trades === 1 ? "1 trade" : count(t.trades) + " trades"}</a>
     </article>`;
   }
@@ -451,9 +451,9 @@
   // avatars X indisponibles : initiale à la place d'une image cassée
   document.addEventListener("error", (e) => {
     const img = e.target;
-    if (img.tagName === "IMG" && img.classList.contains("post-avatar")) {
+    if (img.tagName === "IMG" && (img.classList.contains("post-avatar") || img.classList.contains("sf-av"))) {
       const s = document.createElement("span");
-      s.className = "post-avatar"; s.style.cssText = img.style.cssText; s.textContent = img.dataset.fallback || "?";
+      s.className = img.classList.contains("sf-av") ? "sf-av sf-ph" : "post-avatar"; s.style.cssText = img.style.cssText; s.textContent = img.dataset.fallback || "?";
       img.replaceWith(s);
     }
   }, true);
