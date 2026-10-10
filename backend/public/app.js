@@ -132,10 +132,16 @@
     if (!slot) return;
     const draw = (m) => {
       if (m) {
-        const av = m.avatar ? `<img src="${esc(m.avatar)}" alt="">` : `<span class="avatar-ph"></span>`;
+        const av = m.avatar
+          ? `<img src="${esc(m.avatar)}" alt="" referrerpolicy="no-referrer">`
+          : `<span class="avatar-ph"></span>`;
         slot.innerHTML = `<a class="who" href="/me" style="text-decoration:none">${av}<span>@${esc(m.handle)}</span></a>
           <button class="btn quiet small" data-logout>Se déconnecter</button>`;
         slot.querySelector("[data-logout]").onclick = logout;
+        // photo X indisponible : pastille neutre à la place d'une image cassée
+        slot.querySelector(".who img")?.addEventListener("error", (e) => {
+          const ph = document.createElement("span"); ph.className = "avatar-ph"; e.target.replaceWith(ph);
+        });
       } else {
         slot.innerHTML = `<button class="btn small" data-login>${X_SVG} Se connecter avec X</button>`;
         slot.querySelector("[data-login]").onclick = () => login().catch(() => {});
@@ -189,7 +195,10 @@
       if (c.chain === "base") return;
       const el = document.createElement("div");
       el.className = "testnet";
-      el.textContent = c.devLogin
+      const compact = document.body.hasAttribute("data-compact");
+      el.textContent = compact
+        ? "Testnet Base Sepolia : les tokens n'ont aucune valeur."
+        : c.devLogin
         ? "Version de test sur Base Sepolia : les tokens n'ont aucune valeur et la connexion X est simulée (tu choisis un pseudo)."
         : "Version de test sur Base Sepolia : les tokens n'ont aucune valeur.";
       document.body.prepend(el);

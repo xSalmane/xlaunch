@@ -27,7 +27,7 @@ app.use((req, res, next) => {
     (frameable
       ? "frame-ancestors https://x.com https://*.x.com https://twitter.com https://*.twitter.com 'self'; "
       : "frame-ancestors 'self'; ") +
-      "default-src 'self'; img-src 'self' data: https://pbs.twimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "default-src 'self'; img-src 'self' data: https://pbs.twimg.com https://abs.twimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'"
   );
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");

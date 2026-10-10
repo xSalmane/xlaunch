@@ -56,8 +56,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = $("launchBtn");
     btn.disabled = true; btn.textContent = "Déploiement sur Base…";
     try {
-      const r = await api("/api/launch", { method: "POST", body: JSON.stringify({ name, symbol, image: imageUrl }) });
+      const r = await api("/api/launch", { method: "POST", body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim() }) });
       $("composer").hidden = true; $("done").hidden = false;
+      $("done").scrollIntoView({ block: "start", behavior: "smooth" });
       $("doneTitle").textContent = `$${symbol} est en ligne.`;
       $("doneShare").innerHTML = `${XL.X_SVG} Partager sur X`;
       $("doneShare").href = XL.tweetUrl(`Je viens de lancer $${symbol} sur Base 🔵`, r.share);
