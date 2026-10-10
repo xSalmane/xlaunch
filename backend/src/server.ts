@@ -2,14 +2,15 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
-import { isAddress, getAddress, type Address } from "viem";
+import { isAddress, getAddress, parseEther, type Address } from "viem";
 import { config, blocklist, explorer } from "./config.js";
 import { authRouter, requireAuth, softAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
-import { launchesRepo, claimsRepo, likesRepo } from "./db.js";
-import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps } from "./chain.js";
+import { launchesRepo, claimsRepo, likesRepo, commentsRepo, referralsRepo, usersRepo, type CommentRow } from "./db.js";
+import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps, sendEth, relayerBalance } from "./chain.js";
 import { listTokens, getToken, trades, chart, globalStats, activity } from "./market.js";
 import { smartFollowers, frontrunEnabled } from "./frontrun.js";
-import { initQuotes, getQuotes, quoteOf, mintTestStocks } from "./quotes.js";
+import { renderTokenCard } from "./og.js";
+import { initQuotes, getQuotes, quoteOf, quoteUsd, mintTestStocks } from "./quotes.js";
 import { startIndexer } from "./indexer.js";
 
 const app = express();
@@ -54,13 +55,13 @@ const ASSET_V = (() => {
 })();
 const versioned = (html: string) =>
   html.replace(/(["'])\/static\/([\w.-]+\.(?:js|css))\1/g, (_m, q, f) => `${q}/static/${f}?v=${process.env.NODE_ENV === "production" ? ASSET_V : Date.now()}${q}`);
-function render(file: string, meta: { title: string; description: string; player?: string }) {
+function render(file: string, meta: { title: string; description: string; player?: string; image?: string }) {
   let html = templates.get(file);
   if (!html || process.env.NODE_ENV !== "production") {
     html = fs.readFileSync(path.join(publicDir, file), "utf8");
     templates.set(file, html);
   }
-  const img = `${config.publicUrl}/static/card.png`;
+  const img = meta.image ?? `${config.publicUrl}/static/card.png`;
   const tags = [
     `<title>${esc(meta.title)}</title>`,
     `<meta name="description" content="${esc(meta.description)}">`,
@@ -103,12 +104,35 @@ app.get("/t/:token", (req, res) => {
     title: `$${row.symbol} — ${row.name}`,
     description: row.description || `Launched by @${row.handle} on Base via XLaunch.`,
     player: `${config.publicUrl}/embed?token=${row.token}`,
+    // l'heure dans l'URL force X à reprendre une image à jour au lieu de sa vieille copie
+    image: `${config.publicUrl}/og/${row.token}.png?t=${Math.floor(Date.now() / 600_000)}`,
   }));
 });
 // profil public d'un créateur (ses tokens, ses likes, ses smart followers)
 app.get("/p/:handle", (req, res) => {
   const handle = String(req.params.handle).replace(/[^\w]/g, "").slice(0, 15);
   res.type("html").send(render("me.html", { title: `@${handle} — XLaunch`, description: `Tokens launched by @${handle} on Base, and who follows them.` }));
+});
+// image de partage d'un token (gardée 5 minutes : la market cap bouge)
+const ogCache = new Map<string, { at: number; png: Buffer }>();
+app.get("/og/:file", async (req, res) => {
+  const token = String(req.params.file).replace(/\.png$/, "");
+  if (!isAddress(token)) return res.status(404).end();
+  const key = token.toLowerCase();
+  const hit = ogCache.get(key);
+  if (hit && Date.now() - hit.at < 300_000) return res.type("png").set("Cache-Control", "public, max-age=300").send(hit.png);
+  const fee = await creatorFeeBps();
+  const t = listTokens({ q: token, limit: 1, creatorFeeBps: fee }).find((x) => x.token?.toLowerCase() === key);
+  if (!t) return res.status(404).end();
+  try {
+    const png = renderTokenCard(t, { uploadDir, chainLabel: config.chain === "base" ? "BASE" : "BASE SEPOLIA · TESTNET", site: "XLaunch" });
+    if (ogCache.size > 500) ogCache.clear();
+    ogCache.set(key, { at: Date.now(), png });
+    res.type("png").set("Cache-Control", "public, max-age=300").send(png);
+  } catch (e) {
+    console.error("og", e);
+    res.redirect("/static/card.png");
+  }
 });
 app.get("/embed", (_req, res) => {
   let html = templates.get("embed.html");
@@ -187,6 +211,7 @@ app.get("/api/token/:token/chart", (req, res) => {
 // ------------------------------------------------------------------ API connectée
 app.get("/api/me", requireAuth, (_req, res) => {
   const s = res.locals.session as Session;
+  usersRepo.touch(s.sub, s.handle, s.avatar ?? "");
   res.json({
     handle: s.handle,
     avatar: s.avatar,
@@ -355,6 +380,125 @@ app.get("/api/smart-followers/:handle", async (req, res) => {
   } catch (e) {
     res.status(502).json({ configured: true, error: (e as Error).message });
   }
+});
+
+// ------------------------------------------------------------------ parrainage
+const REFERRAL_WINDOW_S = 48 * 3600; // un compte ne peut être parrainé que pendant ses 48 premières heures sur le site
+app.post("/api/referral", requireAuth, express.json({ limit: "1kb" }), (req, res) => {
+  const s = res.locals.session as Session;
+  usersRepo.touch(s.sub, s.handle, s.avatar ?? "");
+  const ref = String(req.body?.ref ?? "").replace(/^@/, "");
+  if (!HANDLE.test(ref)) return res.status(400).json({ error: "Invalid referral." });
+  const referrer = usersRepo.byHandle(ref);
+  const me = usersRepo.get(s.sub);
+  if (!referrer || referrer.x_id === s.sub) return res.json({ attached: false });
+  if (referralsRepo.of(s.sub)) return res.json({ attached: false, already: true });
+  if (!me || Date.now() / 1000 - me.first_seen > REFERRAL_WINDOW_S || launchesRepo.byUser(s.sub).length) return res.json({ attached: false });
+  // pas de boucle : on ne peut pas parrainer son propre parrain
+  if (referralsRepo.of(referrer.x_id)?.referrer_x_id === s.sub) return res.json({ attached: false });
+  const attached = referralsRepo.attach({ xId: s.sub, handle: s.handle, referrerXId: referrer.x_id, referrerHandle: referrer.handle });
+  res.json({ attached, referrer: referrer.handle });
+});
+
+async function referralState(xId: string) {
+  const fee = await creatorFeeBps();
+  const friends = referralsRepo.referredBy(xId).map((f) => {
+    const tokens = listTokens({ xId: f.x_id, limit: 100, creatorFeeBps: fee });
+    return { handle: f.handle, joinedAt: f.created_at, tokens: tokens.length, platformFeesUsd: tokens.reduce((a, t) => a + t.platformFeesUsd, 0) };
+  });
+  const earnedUsd = friends.reduce((a, f) => a + f.platformFeesUsd, 0) * (config.referralBps / 10_000);
+  const paidUsd = referralsRepo.paidUsd(xId);
+  return { friends, earnedUsd, paidUsd, availableUsd: Math.max(0, earnedUsd - paidUsd) };
+}
+app.get("/api/referrals", requireAuth, async (_req, res) => {
+  const s = res.locals.session as Session;
+  const st = await referralState(s.sub);
+  res.json({
+    link: `${config.publicUrl}/?ref=${encodeURIComponent(s.handle)}`,
+    shareBps: config.referralBps,
+    creatorFeeBps: await creatorFeeBps(),
+    payouts: config.referralPayouts,
+    minPayoutUsd: config.referralMinPayoutUsd,
+    referredBy: referralsRepo.of(s.sub)?.referrer_handle ?? null,
+    friends: st.friends.map(({ handle, joinedAt, tokens, platformFeesUsd }) => ({ handle, joinedAt, tokens, earnedUsd: platformFeesUsd * (config.referralBps / 10_000) })),
+    earnedUsd: st.earnedUsd, paidUsd: st.paidUsd, availableUsd: st.availableUsd,
+  });
+});
+
+const paying = new Set<string>();
+app.post("/api/referrals/claim", requireAuth, express.json({ limit: "1kb" }), async (req, res) => {
+  const s = res.locals.session as Session;
+  if (!config.referralPayouts) return res.status(503).json({ error: "Referral payouts aren't open yet. Your earnings are kept safe until they are." });
+  const recipient = String(req.body?.recipient ?? "").trim();
+  if (!isAddress(recipient)) return res.status(400).json({ error: "This isn't a valid Base address (0x followed by 40 characters)." });
+  if (Date.now() / 1000 - s.iat > config.claimMaxAuthAgeSec)
+    return res.status(401).json({ error: "For security, sign in with X again to claim.", reauth: true });
+  if (paying.has(s.sub)) return res.status(429).json({ error: "A payout is already in progress." });
+  paying.add(s.sub);
+  let id = 0, sent = false;
+  try {
+    const st = await referralState(s.sub);
+    if (st.availableUsd < config.referralMinPayoutUsd)
+      return res.status(400).json({ error: `Nothing to claim yet: payouts start at $${config.referralMinPayoutUsd}.` });
+    const ethUsd = quoteUsd(config.weth);
+    if (!(ethUsd > 0)) return res.status(503).json({ error: "The ETH price is unavailable. Try again in a minute." });
+    const wei = BigInt(Math.floor((st.availableUsd / ethUsd) * 1e18));
+    // le wallet de la plateforme garde toujours de quoi payer le gas des lancements
+    const reserve = parseEther(String(config.minRelayerBalanceEth * 4));
+    if ((await relayerBalance()) < wei + reserve) return res.status(503).json({ error: "Payouts are temporarily paused. Try again later." });
+    id = referralsRepo.startPayout({ xId: s.sub, recipient, usd: st.availableUsd, wei: wei.toString() });
+    const r = await sendEth(getAddress(recipient), wei, (hash) => { sent = true; referralsRepo.sentPayout(id, hash); });
+    referralsRepo.finishPayout(id, r.txHash, true);
+    res.json({ txHash: r.txHash, usd: st.availableUsd, eth: Number(wei) / 1e18, explorer: `${explorer}/tx/${r.txHash}` });
+  } catch (e) {
+    console.error("referral payout", e);
+    if (id && !sent) referralsRepo.finishPayout(id, null, false);
+    res.status(500).json({ error: sent
+      ? "The payout was sent but isn't confirmed yet. Check your wallet in a few minutes."
+      : "The payout failed. Nothing was sent; try again in a few minutes." });
+  } finally {
+    paying.delete(s.sub);
+  }
+});
+
+// ------------------------------------------------------------------ commentaires
+const commentView = (c: CommentRow, s: Session | undefined, creatorXId: string) => ({
+  id: c.id, handle: c.handle, avatar: c.avatar, body: c.body, createdAt: c.created_at,
+  mine: !!s && s.sub === c.x_id,
+  canDelete: !!s && (s.sub === c.x_id || s.sub === creatorXId),
+  byCreator: c.x_id === creatorXId,
+});
+app.get("/api/token/:token/comments", softAuth, (req, res) => {
+  const row = isAddress(String(req.params.token)) ? launchesRepo.byToken(String(req.params.token)) : undefined;
+  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  const before = Math.max(0, Number(req.query.before) || 0);
+  const list = commentsRepo.list(row.token!, 50, before);
+  res.json(list.map((c) => commentView(c, res.locals.session, row.x_id)));
+});
+app.post("/api/token/:token/comments", requireAuth, express.json({ limit: "4kb" }), (req, res) => {
+  const s = res.locals.session as Session;
+  const row = isAddress(String(req.params.token)) ? launchesRepo.byToken(String(req.params.token)) : undefined;
+  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  const body = String(req.body?.body ?? "").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  if (!body) return res.status(400).json({ error: "Write something first." });
+  if ([...body].length > 280) return res.status(400).json({ error: "Comments are 280 characters max." });
+  const why = eligibility(s);
+  if (why) return res.status(403).json({ error: why.replace("to launch a token", "to comment") });
+  const lower = body.toLowerCase();
+  if (blocklist.some((w) => lower.includes(w))) return res.status(400).json({ error: "This comment isn't allowed." });
+  if (commentsRepo.countUserSince(s.sub, Math.floor(Date.now() / 1000) - 600) >= 10) return res.status(429).json({ error: "Slow down a little: 10 comments per 10 minutes." });
+  if (commentsRepo.lastBody(s.sub) === body) return res.status(400).json({ error: "You just posted this exact comment." });
+  const c = commentsRepo.insert({ token: row.token!, xId: s.sub, handle: s.handle, avatar: s.avatar ?? "", body });
+  res.json(commentView(c, s, row.x_id));
+});
+app.delete("/api/comments/:id", requireAuth, (req, res) => {
+  const s = res.locals.session as Session;
+  const c = commentsRepo.byId(Number(req.params.id) || 0);
+  if (!c) return res.status(404).json({ error: "This comment no longer exists." });
+  const row = launchesRepo.byToken(c.token);
+  if (c.x_id !== s.sub && row?.x_id !== s.sub) return res.status(403).json({ error: "You can only delete your own comments, or comments on your token." });
+  commentsRepo.remove(c.id);
+  res.json({ ok: true });
 });
 
 // Like / unlike : un like par compte X et par token

@@ -163,3 +163,17 @@ export async function claimFor(xId: string, recipient: Address, tokens: Address[
 export const relayerAddress = relayer.address;
 export const attesterAddress = attester.address;
 export const chainId = chain.id;
+
+/** envoi d'ETH depuis le wallet de la plateforme (versements de parrainage) */
+export async function sendEth(to: Address, wei: bigint, onSent: (hash: Hex) => void): Promise<{ txHash: Hex }> {
+  return serial(async () => {
+    const hash = await wallet.sendTransaction({ to, value: wei });
+    onSent(hash); // à partir d'ici, l'argent est peut-être parti : on ne doit plus jamais compter ce versement comme échoué
+    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+    if (receipt.status !== "success") throw new Error("transfer revert " + hash);
+    return { txHash: hash };
+  });
+}
+export async function relayerBalance(): Promise<bigint> {
+  return publicClient.getBalance({ address: relayer.address });
+}

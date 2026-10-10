@@ -53,7 +53,34 @@
         <button type="button" role="tab" aria-selected="true" data-tab="tokens"><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Tokens</span></button>
         <button type="button" role="tab" aria-selected="false" data-tab="smart" id="tabSmartBtn" hidden><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg> Smart followers</span></button>
         <button type="button" role="tab" aria-selected="false" data-tab="gains" id="tabGainsBtn"><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg> Earnings</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="refs" id="tabRefsBtn"><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v7h14v-7M12 8v12"/><path d="M12 8C10 4 6.5 4.5 7.5 7c.4 1 2.5 1 4.5 1zM12 8c2-4 5.5-3.5 4.5-1-.4 1-2.5 1-4.5 1z"/></svg> Referrals</span></button>
       </div>
+      <section id="tab-refs" class="section" style="border-bottom:0" hidden>
+        <div class="ref-hero">
+          <div class="ref-ic"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v7h14v-7M12 8v12"/><path d="M12 8C10 4 6.5 4.5 7.5 7c.4 1 2.5 1 4.5 1zM12 8c2-4 5.5-3.5 4.5-1-.4 1-2.5 1-4.5 1z"/></svg></div>
+          <div><h2>Invite creators, earn forever</h2>
+          <p class="mute" id="refExplain">You earn a share of the platform fees on every token launched by people you invite.</p></div>
+        </div>
+        <div class="ref-link"><input class="input" id="refLink" readonly aria-label="Your referral link"><button class="btn quiet" type="button" id="refCopy"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy</button></div>
+        <a class="btn ink wide" id="refShare" target="_blank" rel="noopener" style="margin-top:8px"></a>
+        <p class="mute" style="font-size:13px;margin:8px 0 0">Every token you share from XLaunch already carries your link.</p>
+        <dl class="ref-stats">
+          <div><dt>Friends joined</dt><dd id="refFriends">0</dd></div>
+          <div><dt>Tokens they launched</dt><dd id="refTokens">0</dd></div>
+          <div><dt>Earned</dt><dd id="refEarned">$0</dd></div>
+          <div><dt>Available</dt><dd id="refAvail">$0</dd></div>
+        </dl>
+        <form class="claim-form" id="refForm" novalidate>
+          <label class="field"><span>Get paid in ETH</span>
+            <input class="input" id="refAddr" placeholder="Your Base address (0x…)" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="notice" id="refMsg" role="alert" hidden></div>
+          <button class="btn" type="submit" id="refClaim">Claim referral earnings</button>
+        </form>
+        <h3 class="ref-h3">Your invites</h3>
+        <div id="refList"></div>
+        <p class="mute" id="refBy" style="font-size:13px" hidden></p>
+      </section>
       <section id="tab-smart" hidden>
         <div id="sfList"></div>
         <p class="sf-foot mute">Smart followers are notable traders, founders, funds and KOLs, as indexed by <a href="https://www.frontrun.pro" target="_blank" rel="noopener">Frontrun</a>.</p>

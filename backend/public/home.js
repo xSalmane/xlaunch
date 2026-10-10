@@ -146,6 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const shown = rows.slice(0, count);
       $("feed").innerHTML = shown.map((t) => XL.post(t, highlight && seen && !seen.has(t.token))).join("");
       seen = new Set(shown.map((t) => t.token));
+      shown.forEach((t) => XL.milestoneCheck(t));
       $("feedEmpty").hidden = !!shown.length;
       $("more").hidden = rows.length <= count;
     } catch {}

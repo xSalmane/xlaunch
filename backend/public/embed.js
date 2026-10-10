@@ -35,9 +35,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return `<article class="slide${enter ? " enter" : ""}" data-token="${fmt.esc(t.token)}">
       <div class="s-media" data-like-media title="Double-tap to like">${media}<span class="ig-burst">${XL.icon("heart")}</span></div>
       <div class="s-shade"></div>
-      <div class="s-top">${t.hot ? `<span class="hot">🔥 Hot</span>` : ""}<span class="chip-test">Testnet</span></div>
+      <div class="s-top">${t.hot ? `<span class="hot">🔥 Hot</span>` : ""}${t.milestone ? `<span class="ms-badge">${XL.icon("trophy", "sm")}${fmt.usd(t.milestone)}</span>` : ""}<span class="chip-test">Testnet</span></div>
       <div class="s-side">
         <button class="s-btn like${t.liked ? " on" : ""}" type="button" data-like aria-pressed="${t.liked ? "true" : "false"}" aria-label="Like">${XL.icon("heart")}<span data-likes data-short data-n="${t.likes}">${fmt.count(t.likes)}</span></button>
+        <a class="s-btn" href="/t/${fmt.esc(t.token)}#comments" aria-label="Comments">${XL.icon("comment")}<span>${t.comments ? fmt.count(t.comments) : "Chat"}</span></a>
         <a class="s-btn" href="/t/${fmt.esc(t.token)}" aria-label="Chart">${XL.icon("chart")}<span>Chart</span></a>
         <a class="s-btn" href="${share}" aria-label="Share on X">${XL.icon("share")}<span>Share</span></a>
       </div>

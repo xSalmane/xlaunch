@@ -12,8 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ------------------------------------------------------------ onglets (Tokens / Smart followers / Earnings)
   function tab(name) {
     document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === name)));
-    ["tokens", "smart", "gains"].forEach((t) => ($("tab-" + t).hidden = t !== name));
+    ["tokens", "smart", "gains", "refs"].forEach((t) => ($("tab-" + t).hidden = t !== name));
     if (name === "smart") loadSmart();
+    if (name === "refs") loadRefs().catch((e) => refMsg(e.message));
   }
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => tab(b.dataset.tab)));
   $("sfLine").addEventListener("click", () => { tab("smart"); $("tab-smart").scrollIntoView({ behavior: "smooth", block: "start" }); });
@@ -95,9 +96,58 @@ document.addEventListener("DOMContentLoaded", () => {
       </a>`).join("") + (more > 0 ? `<div class="sf-more mute">and ${fmt.count(more)} more</div>` : "");
   }
 
+  // ------------------------------------------------------------ parrainage
+  const refMsg = (text, kind = "err") => { const m = $("refMsg"); m.hidden = !text; if (text) { m.className = "notice " + kind; m.innerHTML = text; } };
+  let refs = null;
+  async function loadRefs() {
+    const r = (refs = await api("/api/referrals"));
+    const share = Math.round(r.shareBps / 100), platform = Math.round((10_000 - r.creatorFeeBps) / 100);
+    $("refExplain").textContent = `You get ${share}% of the platform's cut (${platform}% of the trading fees) on every token launched by people you invite. For life, paid in ETH.`;
+    $("refLink").value = r.link;
+    $("refShare").innerHTML = `${XL.X_SVG} Share my invite on X`;
+    $("refShare").href = "https://x.com/intent/post?" + new URLSearchParams({ text: "Launch your own token on Base straight from X. No wallet needed, gas is on us 🔵", url: r.link });
+    $("refFriends").textContent = fmt.count(r.friends.length);
+    $("refTokens").textContent = fmt.count(r.friends.reduce((a, f) => a + f.tokens, 0));
+    $("refEarned").textContent = fmt.usd(r.earnedUsd);
+    $("refAvail").textContent = fmt.usd(r.availableUsd);
+    $("refClaim").disabled = !r.payouts || r.availableUsd < r.minPayoutUsd;
+    $("refClaim").textContent = r.payouts ? (r.availableUsd >= r.minPayoutUsd ? `Claim ${fmt.usd(r.availableUsd)} in ETH` : `Payouts start at ${fmt.usd(r.minPayoutUsd)}`) : "Payouts open soon";
+    $("refList").innerHTML = r.friends.length
+      ? r.friends.map((f) => `<a class="sf-row" href="/p/${fmt.esc(f.handle)}">
+          <span class="sf-av sf-ph" style="--s:40px">${fmt.esc(f.handle[0].toUpperCase())}</span>
+          <span class="sf-main"><b>@${fmt.esc(f.handle)}</b><span class="mute">joined ${fmt.ago(f.joinedAt)} ago · ${f.tokens} token${f.tokens === 1 ? "" : "s"}</span></span>
+          <span class="sf-num"><b>${fmt.usd(f.earnedUsd)}</b><span class="mute">to you</span></span></a>`).join("")
+      : `<div class="c-empty mute">No invites yet. Share your link: anyone who signs up through it within their first 48 hours counts.</div>`;
+    $("refBy").hidden = !r.referredBy;
+    if (r.referredBy) $("refBy").innerHTML = `You were invited by <a class="who-link" href="/p/${fmt.esc(r.referredBy)}"><b>@${fmt.esc(r.referredBy)}</b></a>.`;
+  }
+  $("refCopy").addEventListener("click", () => XL.copy($("refLink").value, "Invite link copied"));
+  $("refForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const recipient = $("refAddr").value.trim();
+    if (!ADDR.test(recipient)) { refMsg("This address isn't valid: it must start with 0x and be 42 characters long."); return; }
+    if (!confirm(`Send your referral earnings in ETH to ${recipient}?\n\nDouble-check the address: transfers are final.`)) return;
+    $("refClaim").disabled = true; refMsg("Sending…", "info");
+    try {
+      let r;
+      try { r = await api("/api/referrals/claim", { method: "POST", body: JSON.stringify({ recipient }) }); }
+      catch (err) {
+        if (!err.data?.reauth) throw err;
+        refMsg("For security, sign in with X again to confirm.", "info");
+        await XL.login();
+        r = await api("/api/referrals/claim", { method: "POST", body: JSON.stringify({ recipient }) });
+      }
+      refMsg(`Sent ${r.eth.toFixed(6)} ETH (${fmt.usd(r.usd)}). <a href="${fmt.esc(r.explorer)}" target="_blank" rel="noopener">View transaction</a>`, "ok");
+    } catch (err) { refMsg(fmt.esc(err.message)); }
+    loadRefs().catch(() => {});
+  });
+  const fromHash = () => { if (location.hash === "#referrals") tab("refs"); else if (location.hash === "#earnings") tab("gains"); };
+  if (!pub) { setTimeout(fromHash, 0); window.addEventListener("hashchange", fromHash); }
+
   // ------------------------------------------------------------ profil public d'un créateur
   if (pub) {
     $("tabGainsBtn").hidden = true;
+    $("tabRefsBtn").hidden = true;
     $("loggedOut").hidden = true; $("loggedIn").hidden = false;
     $("pTitle").textContent = `@${pub}`;
     header({ handle: pub, avatar: "" });
@@ -116,7 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ------------------------------------------------------------ mon profil
-  if (location.hash === "#earnings") tab("gains");
 
   async function load() {
     const c = await api("/api/creator");
@@ -136,6 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? "Fees build up in the pools. They're collected and sent to your address when you claim them."
         : "Launch a token to start earning trading fees.";
     if (c.boundWallet && !$("recipient").value) $("recipient").value = c.boundWallet;
+    if (c.boundWallet && !$("refAddr").value) $("refAddr").value = c.boundWallet;
     $("claimForm").hidden = !c.tokens.length;
   }
 

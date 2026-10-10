@@ -47,6 +47,11 @@ export const config = {
   launchesPerUserPerDay: num("LAUNCHES_PER_USER_PER_DAY", 1),
   globalLaunchesPerHour: num("GLOBAL_LAUNCHES_PER_HOUR", 30),
   claimMaxAuthAgeSec: num("CLAIM_MAX_AUTH_AGE_SEC", 15 * 60),
+  // parrainage : part de la plateforme reversée au parrain (2000 = 20 %), versée en ETH depuis le wallet de la plateforme
+  referralBps: num("REFERRAL_BPS", 2000),
+  referralMinPayoutUsd: num("REFERRAL_MIN_PAYOUT_USD", process.env.CHAIN === "base" ? 5 : 0.01),
+  // sur le mainnet, les versements automatiques ne s'activent que si on le demande explicitement
+  referralPayouts: (process.env.REFERRAL_PAYOUTS ?? (process.env.CHAIN === "base" ? "0" : "1")) === "1",
 
   dbPath: process.env.DB_PATH ?? "./xlaunch.db",
 };

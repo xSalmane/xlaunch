@@ -140,6 +140,10 @@
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
     feather: '<path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/>',
     heart: '<path d="M12 20.3s-7.4-4.5-9.3-9.1C1.3 7.8 3.5 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.5 0 5.7 3.3 4.3 6.7-1.9 4.6-9.3 9.1-9.3 9.1z"/>',
+    comment: '<path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/>',
+    trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7M10 17h4"/>',
+    gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v7h14v-7M12 8v12"/><path d="M12 8C10 4 6.5 4.5 7.5 7c.4 1 2.5 1 4.5 1zM12 8c2-4 5.5-3.5 4.5-1-.4 1-2.5 1-4.5 1z"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   };
   const icon = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] ?? ""}</svg>`;
@@ -175,7 +179,28 @@
       <path class="area" d="${d}L${W},${H}L0,${H}Z" fill="${col}"/>
       <path d="${d}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
   }
-  function tweetUrl(text, url) { return "https://x.com/intent/post?" + new URLSearchParams({ text, url }); }
+  function tweetUrl(text, url) { return "https://x.com/intent/post?" + new URLSearchParams({ text, url: withRef(url) }); }
+  /** nos liens partagés portent le parrainage de la personne connectée */
+  function withRef(url) {
+    if (!me?.handle || !url || !String(url).startsWith(location.origin)) return url;
+    const u = new URL(url);
+    u.searchParams.set("ref", me.handle);
+    return u.toString();
+  }
+  // arrivée via un lien de parrainage : on retient le premier parrain, puis on l'envoie une fois connecté
+  try {
+    const ref = new URLSearchParams(location.search).get("ref");
+    if (ref && /^\w{1,15}$/.test(ref) && !localStorage.getItem("xl_ref")) localStorage.setItem("xl_ref", ref);
+  } catch {}
+  async function sendReferral() {
+    let ref = null;
+    try { ref = localStorage.getItem("xl_ref"); if (!ref || localStorage.getItem("xl_ref_done")) return; } catch { return; }
+    if (!me || ref.toLowerCase() === me.handle.toLowerCase()) return;
+    try {
+      await api("/api/referral", { method: "POST", body: JSON.stringify({ ref }) });
+      localStorage.setItem("xl_ref_done", "1");
+    } catch {}
+  }
 
   // ------------------------------------------------------------ couvertures génératives (la touche spéciale)
   // Chaque token sans logo reçoit une couverture unique, calculée à partir de son adresse :
@@ -237,6 +262,7 @@
         <a href="/p/${esc(t.creator)}" aria-label="@${esc(t.creator)}'s profile">${avatar(t.creatorAvatar, t.creator, 34)}</a>
         <div class="who-line"><a class="who-link" href="/p/${esc(t.creator)}"><b>@${esc(t.creator)}</b></a> <span class="mute">· ${ago(t.createdAt)}</span><br>
           <span class="mute">launched $${esc(t.symbol)}, paired with</span> ${pair(t.quote)}</div>
+        ${t.milestone ? `<span class="ms-badge" title="Market cap hit ${usd(t.milestone)}">${icon("trophy", "sm")}${usd(t.milestone)}</span>` : ""}
         ${t.hot ? `<span class="hot" title="3+ likes in the last hour">🔥 Hot</span>` : ""}
       </header>
       <div class="ig-media" data-like-media title="Double-tap to like">
@@ -246,6 +272,7 @@
       </div>
       <div class="ig-actions">
         <button class="ig-btn like${t.liked ? " on" : ""}" type="button" data-like aria-pressed="${t.liked ? "true" : "false"}" aria-label="Like">${icon("heart")}</button>
+        <a class="ig-btn ig-com" href="${href}#comments" aria-label="Comments">${icon("comment")}${t.comments ? `<span>${count(t.comments)}</span>` : ""}</a>
         <a class="ig-btn" href="${href}" aria-label="Chart and trades">${icon("chart")}</a>
         <a class="ig-btn" href="${share}" target="_blank" rel="noopener" aria-label="Share on X">${icon("share")}</a>
         <span class="grow"></span>
@@ -254,7 +281,7 @@
       <div class="ig-likes" data-likes data-n="${t.likes}">${likesText(t.likes)}</div>
       <div class="ig-stats"><b>$${esc(t.symbol)}</b> ${esc(t.name)} <span class="mute">· ${count(t.trades)} trades · ${usd(t.creatorFeesUsd)} earned by the creator</span></div>
       ${t.description ? `<p class="ig-caption"><a class="who-link" href="/p/${esc(t.creator)}"><b>@${esc(t.creator)}</b></a> ${esc(t.description)}</p>` : ""}
-      <a class="ig-more" href="${href}">View chart and ${t.trades === 1 ? "1 trade" : count(t.trades) + " trades"}</a>
+      <a class="ig-more" href="${href}${t.comments ? "#comments" : ""}">${t.comments ? `View ${t.comments === 1 ? "1 comment" : `all ${count(t.comments)} comments`}` : `View chart and ${t.trades === 1 ? "1 trade" : count(t.trades) + " trades"}`}</a>
     </article>`;
   }
 
@@ -263,6 +290,7 @@
     return `<a class="tile" href="/t/${esc(t.token)}" aria-label="$${esc(t.symbol)}, ${likesText(t.likes)}">
       ${media(t)}
       ${t.hot ? `<span class="hot">🔥</span>` : ""}
+      ${t.milestone ? `<span class="ms-badge tile-ms">${icon("trophy", "sm")}${usd(t.milestone)}</span>` : ""}
       ${rank ? `<span class="tile-rank">#${rank}</span>` : ""}
       <span class="tile-cap"><span>$${esc(t.symbol)}</span><span>♥ ${count(t.likes)}</span></span>
       <span class="tile-over"><span>♥ ${likesText(t.likes)}</span><span>${usd(t.mcapUsd)} ${pct(t.change24h).replace(/class="(up|down|mute)"/, 'style="color:#fff"')}</span></span>
@@ -332,6 +360,29 @@
     }
     document.body.append(box);
     setTimeout(() => box.remove(), 3500);
+  }
+
+  // ------------------------------------------------------------ paliers de market cap
+  const MILESTONES = [25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 5_000_000, 10_000_000];
+  let celebrated = false;
+  /** fête un palier franchi depuis la dernière visite (une seule fois par page, jamais à la découverte d'un token) */
+  function milestoneCheck(t) {
+    if (!t?.token || !t.milestone) return;
+    const k = "xl_ms_" + t.token.toLowerCase();
+    let seen = null;
+    try { seen = localStorage.getItem(k); localStorage.setItem(k, String(t.milestone)); } catch { return; }
+    if (seen === null || Number(seen) >= t.milestone || celebrated) return;
+    celebrated = true;
+    coinRain(t, 22);
+    const share = tweetUrl(`$${t.symbol} just hit ${usd(t.milestone)} market cap on Base 🏆`, t.share);
+    const el = document.createElement("div");
+    el.className = "ms-pop"; el.role = "status";
+    el.innerHTML = `<span class="ms-pop-ic">${icon("trophy")}</span><div><b>$${esc(t.symbol)} hit ${usd(t.milestone)}</b><span>New market cap milestone</span></div>
+      <a class="btn small" href="${share}" target="_blank" rel="noopener">${X_SVG} Share</a><button class="ms-x" type="button" aria-label="Close">×</button>`;
+    document.body.append(el);
+    const close = () => el.remove();
+    el.querySelector(".ms-x").onclick = close;
+    setTimeout(close, 9000);
   }
 
   function toast(msg, ms = 2600) {
@@ -462,10 +513,11 @@
     api, login, logout, refreshMe, onAuth: (fn) => { listeners.add(fn); fn(me); }, get me() { return me; },
     isLogged: () => !!store.get(),
     fmt: { eth, usd, amount, price, pct, ago, short, esc, count }, coin, pair, avatar, spark, post, tile, art, icon, flash, hue,
-    toggleLike, likesText, coinRain, toast, copy, tweetUrl, feeShare, pairPicker, X_SVG,
+    toggleLike, likesText, coinRain, toast, copy, tweetUrl, withRef, feeShare, pairPicker, X_SVG, MILESTONES, milestoneCheck,
   };
 
   listeners.add(drawAuth);
+  listeners.add((m) => { if (m) sendReferral(); });
   document.addEventListener("DOMContentLoaded", () => {
     markNav(); drawAuth(); refreshMe(); testnetBanner(); sideRight();
   });

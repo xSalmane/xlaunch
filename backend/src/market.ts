@@ -14,7 +14,12 @@ const POOL_FEE = 0.01;
 type Row = LaunchRow & {
   last_price: number | null; price_24h: number | null; vol24: number; vol_total: number;
   trades: number; buys24: number; sells24: number; likes: number; likes24: number; likes1h: number;
+  comments: number; ath_price: number | null;
 };
+
+/** paliers de market cap (en dollars), atteints dès que le plus haut les a dépassés */
+export const MILESTONES = [25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 5_000_000, 10_000_000];
+export const milestoneOf = (athMcapUsd: number) => MILESTONES.filter((m) => athMcapUsd >= m).pop() ?? 0;
 
 /** « Hot » : au moins 3 likes dans la dernière heure */
 const HOT_LIKES_1H = 3;
@@ -30,7 +35,9 @@ SELECT l.*,
   (SELECT COUNT(*) FROM swaps s WHERE s.pool=l.pool AND s.ts>@t24 AND side='sell') AS sells24,
   (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token)) AS likes,
   (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token) AND k.created_at>@t24) AS likes24,
-  (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token) AND k.created_at>@t1) AS likes1h
+  (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token) AND k.created_at>@t1) AS likes1h,
+  (SELECT COUNT(*) FROM comments c WHERE c.token=lower(l.token)) AS comments,
+  (SELECT MAX(price) FROM swaps s WHERE s.pool=l.pool) AS ath_price
 FROM launches l WHERE l.status='done'`;
 
 export type TokenView = ReturnType<typeof serialize>;
@@ -56,6 +63,11 @@ export function serialize(r: Row, creatorFeeBps: number) {
     change24h: ref ? price / ref - 1 : 0,
     trades: r.trades, buys24h: r.buys24, sells24h: r.sells24,
     likes: r.likes, likes24h: r.likes24, hot: r.likes1h >= HOT_LIKES_1H, liked: false,
+    comments: r.comments,
+    athMcapUsd: Math.max(r.ath_price ?? 0, r.init_price ?? 0, price) * usd * SUPPLY,
+    milestone: milestoneOf(Math.max(r.ath_price ?? 0, r.init_price ?? 0, price) * usd * SUPPLY),
+    // part de la plateforme dans les frais (sert au calcul du parrainage)
+    platformFeesUsd: ((feesQuote * (10_000 - creatorFeeBps)) / 10_000) * usd,
     trade: uniswapLink(r.token!, r.quote, r.quote_symbol),
     share: `${config.publicUrl}/t/${r.token}`,
   };

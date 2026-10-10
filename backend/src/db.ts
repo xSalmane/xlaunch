@@ -65,6 +65,52 @@ CREATE TABLE IF NOT EXISTS likes (
 );
 CREATE INDEX IF NOT EXISTS likes_token_time ON likes(token, created_at);
 CREATE INDEX IF NOT EXISTS likes_user ON likes(x_id);
+
+-- commentaires sous un token
+CREATE TABLE IF NOT EXISTS comments (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  token      TEXT NOT NULL,           -- adresse en minuscules
+  x_id       TEXT NOT NULL,
+  handle     TEXT NOT NULL,
+  avatar     TEXT NOT NULL DEFAULT '',
+  body       TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comments_token ON comments(token, id);
+CREATE INDEX IF NOT EXISTS comments_user ON comments(x_id, created_at);
+
+-- parrainage : qui a fait venir qui (un seul parrain par compte, définitif)
+CREATE TABLE IF NOT EXISTS referrals (
+  x_id            TEXT PRIMARY KEY,   -- le filleul
+  handle          TEXT NOT NULL,
+  referrer_x_id   TEXT NOT NULL,
+  referrer_handle TEXT NOT NULL,
+  created_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS referrals_referrer ON referrals(referrer_x_id);
+
+-- comptes X déjà passés sur le site (pour le parrainage : qui existe, depuis quand)
+CREATE TABLE IF NOT EXISTS users (
+  x_id       TEXT PRIMARY KEY,
+  handle     TEXT NOT NULL,
+  avatar     TEXT NOT NULL DEFAULT '',
+  first_seen INTEGER NOT NULL,
+  last_seen  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS users_handle ON users(handle COLLATE NOCASE);
+
+-- versements de parrainage déjà effectués (en ETH, depuis le trésor)
+CREATE TABLE IF NOT EXISTS referral_payouts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  x_id       TEXT NOT NULL,
+  recipient  TEXT NOT NULL,
+  usd        REAL NOT NULL,
+  wei        TEXT NOT NULL,
+  tx_hash    TEXT,
+  status     TEXT NOT NULL DEFAULT 'pending', -- pending | done | failed
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS referral_payouts_user ON referral_payouts(x_id);
 `);
 
 // migrations douces (bases déjà créées par une version précédente)
@@ -180,5 +226,71 @@ export const likesRepo = {
 export const claimsRepo = {
   insert(xId: string, recipient: string, txHash: string) {
     db.prepare(`INSERT INTO claims (x_id, recipient, tx_hash, created_at) VALUES (?,?,?,?)`).run(xId, recipient, txHash, now());
+  },
+};
+
+export type CommentRow = { id: number; token: string; x_id: string; handle: string; avatar: string; body: string; created_at: number };
+export const commentsRepo = {
+  list(token: string, limit = 50, before = 0): CommentRow[] {
+    return db.prepare(`SELECT * FROM comments WHERE token=? ${before ? "AND id<?" : ""} ORDER BY id DESC LIMIT ?`)
+      .all(...(before ? [token.toLowerCase(), before, limit] : [token.toLowerCase(), limit])) as CommentRow[];
+  },
+  insert(c: { token: string; xId: string; handle: string; avatar: string; body: string }): CommentRow {
+    const r = db.prepare(`INSERT INTO comments (token, x_id, handle, avatar, body, created_at) VALUES (?,?,?,?,?,?)`)
+      .run(c.token.toLowerCase(), c.xId, c.handle, c.avatar, c.body, now());
+    return db.prepare(`SELECT * FROM comments WHERE id=?`).get(r.lastInsertRowid) as CommentRow;
+  },
+  byId(id: number): CommentRow | undefined {
+    return db.prepare(`SELECT * FROM comments WHERE id=?`).get(id) as CommentRow | undefined;
+  },
+  remove(id: number) { db.prepare(`DELETE FROM comments WHERE id=?`).run(id); },
+  countUserSince(xId: string, since: number): number {
+    return (db.prepare(`SELECT COUNT(*) c FROM comments WHERE x_id=? AND created_at>?`).get(xId, since) as { c: number }).c;
+  },
+  lastBody(xId: string): string | undefined {
+    return (db.prepare(`SELECT body FROM comments WHERE x_id=? ORDER BY id DESC LIMIT 1`).get(xId) as { body: string } | undefined)?.body;
+  },
+};
+
+export const referralsRepo = {
+  of(xId: string): { referrer_x_id: string; referrer_handle: string } | undefined {
+    return db.prepare(`SELECT referrer_x_id, referrer_handle FROM referrals WHERE x_id=?`).get(xId) as { referrer_x_id: string; referrer_handle: string } | undefined;
+  },
+  /** enregistre le parrain si le compte n'en a pas encore ; renvoie true si c'est fait */
+  attach(p: { xId: string; handle: string; referrerXId: string; referrerHandle: string }): boolean {
+    const r = db.prepare(`INSERT OR IGNORE INTO referrals (x_id, handle, referrer_x_id, referrer_handle, created_at) VALUES (?,?,?,?,?)`)
+      .run(p.xId, p.handle, p.referrerXId, p.referrerHandle, now());
+    return r.changes > 0;
+  },
+  referredBy(referrerXId: string): { x_id: string; handle: string; created_at: number }[] {
+    return db.prepare(`SELECT x_id, handle, created_at FROM referrals WHERE referrer_x_id=? ORDER BY created_at DESC`).all(referrerXId) as { x_id: string; handle: string; created_at: number }[];
+  },
+  /** dollars déjà versés ou en cours de versement */
+  paidUsd(xId: string): number {
+    return (db.prepare(`SELECT COALESCE(SUM(usd),0) u FROM referral_payouts WHERE x_id=? AND status!='failed'`).get(xId) as { u: number }).u;
+  },
+  startPayout(p: { xId: string; recipient: string; usd: number; wei: string }): number {
+    return Number(db.prepare(`INSERT INTO referral_payouts (x_id, recipient, usd, wei, created_at) VALUES (?,?,?,?,?)`)
+      .run(p.xId, p.recipient, p.usd, p.wei, now()).lastInsertRowid);
+  },
+  sentPayout(id: number, txHash: string) {
+    db.prepare(`UPDATE referral_payouts SET tx_hash=? WHERE id=?`).run(txHash, id);
+  },
+  finishPayout(id: number, txHash: string | null, ok: boolean) {
+    db.prepare(`UPDATE referral_payouts SET tx_hash=?, status=? WHERE id=?`).run(txHash, ok ? "done" : "failed", id);
+  },
+};
+
+export const usersRepo = {
+  touch(xId: string, handle: string, avatar: string) {
+    db.prepare(`INSERT INTO users (x_id, handle, avatar, first_seen, last_seen) VALUES (?,?,?,?,?)
+      ON CONFLICT(x_id) DO UPDATE SET handle=excluded.handle, avatar=excluded.avatar, last_seen=excluded.last_seen`)
+      .run(xId, handle, avatar, now(), now());
+  },
+  get(xId: string): { x_id: string; handle: string; first_seen: number } | undefined {
+    return db.prepare(`SELECT x_id, handle, first_seen FROM users WHERE x_id=?`).get(xId) as { x_id: string; handle: string; first_seen: number } | undefined;
+  },
+  byHandle(handle: string): { x_id: string; handle: string } | undefined {
+    return db.prepare(`SELECT x_id, handle FROM users WHERE lower(handle)=lower(?) ORDER BY last_seen DESC LIMIT 1`).get(handle) as { x_id: string; handle: string } | undefined;
   },
 };

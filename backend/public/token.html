@@ -45,7 +45,19 @@
         <button class="btn quiet" type="button" id="tCopy"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy address</button>
       </div>
     </section>
+    <section class="section" id="milestones"><h2>Milestones <span class="sub mute" style="font-size:13px;font-weight:500">highest market cap reached</span></h2><div class="ms-track" id="msTrack"></div></section>
     <section class="section"><h2 id="chartTitle">Price</h2><div class="chart" id="chart" role="img" aria-label="Price chart"></div></section>
+    <section class="section" id="comments">
+      <h2>Comments <span class="c-count" id="cCount"></span></h2>
+      <form class="c-compose" id="cForm" novalidate>
+        <span id="cAvatar"></span>
+        <textarea id="cBody" maxlength="280" rows="1" placeholder="Add a comment…" aria-label="Add a comment"></textarea>
+        <button class="btn small" type="submit" id="cPost" disabled>Post</button>
+      </form>
+      <div class="notice" id="cMsg" role="alert" hidden></div>
+      <div id="cList"></div>
+      <div class="more" style="padding:8px"><button class="btn quiet small" type="button" id="cMore" hidden>Load older comments</button></div>
+    </section>
     <section class="section">
       <h2>About</h2>
       <dl class="facts">

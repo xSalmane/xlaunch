@@ -15,6 +15,9 @@ P = {
  "buy": '<path d="M4 7h16l-1.5 9.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
  "copy": '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
  "star": '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+ "comment": '<path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/>',
+ "trophy": '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7M10 17h4"/>',
+ "gift": '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v7h14v-7M12 8v12"/><path d="M12 8C10 4 6.5 4.5 7.5 7c.4 1 2.5 1 4.5 1zM12 8c2-4 5.5-3.5 4.5-1-.4 1-2.5 1-4.5 1z"/>',
  "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
 }
 def i(name, cls=""):
@@ -155,7 +158,19 @@ TOKEN = f'''    <div class="col-head">
         <button class="btn quiet" type="button" id="tCopy">{i("copy","sm")}Copy address</button>
       </div>
     </section>
+    <section class="section" id="milestones"><h2>Milestones <span class="sub mute" style="font-size:13px;font-weight:500">highest market cap reached</span></h2><div class="ms-track" id="msTrack"></div></section>
     <section class="section"><h2 id="chartTitle">Price</h2><div class="chart" id="chart" role="img" aria-label="Price chart"></div></section>
+    <section class="section" id="comments">
+      <h2>Comments <span class="c-count" id="cCount"></span></h2>
+      <form class="c-compose" id="cForm" novalidate>
+        <span id="cAvatar"></span>
+        <textarea id="cBody" maxlength="280" rows="1" placeholder="Add a comment…" aria-label="Add a comment"></textarea>
+        <button class="btn small" type="submit" id="cPost" disabled>Post</button>
+      </form>
+      <div class="notice" id="cMsg" role="alert" hidden></div>
+      <div id="cList"></div>
+      <div class="more" style="padding:8px"><button class="btn quiet small" type="button" id="cMore" hidden>Load older comments</button></div>
+    </section>
     <section class="section">
       <h2>About</h2>
       <dl class="facts">
@@ -200,7 +215,34 @@ ME = f'''    <div class="col-head">
         <button type="button" role="tab" aria-selected="true" data-tab="tokens"><span>{i("grid","sm")} Tokens</span></button>
         <button type="button" role="tab" aria-selected="false" data-tab="smart" id="tabSmartBtn" hidden><span>{i("star","sm")} Smart followers</span></button>
         <button type="button" role="tab" aria-selected="false" data-tab="gains" id="tabGainsBtn"><span>{i("coins","sm")} Earnings</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="refs" id="tabRefsBtn"><span>{i("gift","sm")} Referrals</span></button>
       </div>
+      <section id="tab-refs" class="section" style="border-bottom:0" hidden>
+        <div class="ref-hero">
+          <div class="ref-ic">{i("gift")}</div>
+          <div><h2>Invite creators, earn forever</h2>
+          <p class="mute" id="refExplain">You earn a share of the platform fees on every token launched by people you invite.</p></div>
+        </div>
+        <div class="ref-link"><input class="input" id="refLink" readonly aria-label="Your referral link"><button class="btn quiet" type="button" id="refCopy">{i("copy","sm")}Copy</button></div>
+        <a class="btn ink wide" id="refShare" target="_blank" rel="noopener" style="margin-top:8px"></a>
+        <p class="mute" style="font-size:13px;margin:8px 0 0">Every token you share from XLaunch already carries your link.</p>
+        <dl class="ref-stats">
+          <div><dt>Friends joined</dt><dd id="refFriends">0</dd></div>
+          <div><dt>Tokens they launched</dt><dd id="refTokens">0</dd></div>
+          <div><dt>Earned</dt><dd id="refEarned">$0</dd></div>
+          <div><dt>Available</dt><dd id="refAvail">$0</dd></div>
+        </dl>
+        <form class="claim-form" id="refForm" novalidate>
+          <label class="field"><span>Get paid in ETH</span>
+            <input class="input" id="refAddr" placeholder="Your Base address (0x…)" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="notice" id="refMsg" role="alert" hidden></div>
+          <button class="btn" type="submit" id="refClaim">Claim referral earnings</button>
+        </form>
+        <h3 class="ref-h3">Your invites</h3>
+        <div id="refList"></div>
+        <p class="mute" id="refBy" style="font-size:13px" hidden></p>
+      </section>
       <section id="tab-smart" hidden>
         <div id="sfList"></div>
         <p class="sf-foot mute">Smart followers are notable traders, founders, funds and KOLs, as indexed by <a href="https://www.frontrun.pro" target="_blank" rel="noopener">Frontrun</a>.</p>

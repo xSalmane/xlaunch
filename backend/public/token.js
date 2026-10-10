@@ -34,6 +34,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const pill = card?.querySelector(".ig-pill");
       if (pill) pill.innerHTML = `<span class="num ${XL.flash("m:" + t.token, t.mcapUsd)}">${fmt.usd(t.mcapUsd)}</span>${fmt.pct(t.change24h)}`;
     }
+    drawMilestones(t);
+    XL.milestoneCheck(t);
     const fl = (el, key, v) => { el.className = "num " + XL.flash(key, v); };
     $("kMcap").textContent = fmt.usd(t.mcapUsd); fl($("kMcap"), "k:m", t.mcapUsd);
     $("kPrice").textContent = "$" + fmt.price(t.priceUsd); fl($("kPrice"), "k:p", t.priceUsd);
@@ -66,6 +68,87 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>`;
     }).join("");
   }
+
+  // ------------------------------------------------------------ paliers
+  function drawMilestones(t) {
+    const next = XL.MILESTONES.find((m) => m > t.athMcapUsd);
+    const prev = [...XL.MILESTONES].reverse().find((m) => m <= t.athMcapUsd) ?? 10_000;
+    const pctTo = next ? Math.max(0, Math.min(1, (t.athMcapUsd - prev) / (next - prev))) : 1;
+    const shown = XL.MILESTONES.filter((m, i) => m <= (next ?? 0) || i < 3 || m <= t.milestone).slice(0, 6);
+    $("msTrack").innerHTML = `<div class="ms-chips">${shown.map((m) => `<span class="ms-chip${m <= t.milestone ? " on" : ""}${m === next ? " next" : ""}">${m <= t.milestone ? XL.icon("trophy", "sm") : ""}${fmt.usd(m)}</span>`).join("")}</div>
+      <div class="ms-bar"><span style="width:${(pctTo * 100).toFixed(1)}%"></span></div>
+      <div class="ms-note mute">${next ? `Peak <b>${fmt.usd(t.athMcapUsd)}</b> · ${Math.round(pctTo * 100)}% of the way to ${fmt.usd(next)}` : `Peak <b>${fmt.usd(t.athMcapUsd)}</b> · every milestone reached`}</div>`;
+  }
+
+  // ------------------------------------------------------------ commentaires
+  let cOldest = 0, cNewest = 0;
+  const cRow = (c, fresh) => `<div class="c-row${fresh ? " post-enter" : ""}" data-cid="${c.id}">
+      <a href="/p/${fmt.esc(c.handle)}">${XL.avatar(c.avatar, c.handle, 36)}</a>
+      <div class="c-main">
+        <div class="c-head"><a class="who-link" href="/p/${fmt.esc(c.handle)}"><b>@${fmt.esc(c.handle)}</b></a>${c.byCreator ? `<span class="c-creator">Creator</span>` : ""}<span class="mute">· ${fmt.ago(c.createdAt)}</span>
+          ${c.canDelete ? `<button class="c-del" type="button" data-del="${c.id}" aria-label="Delete comment">${XL.icon("trash", "sm")}</button>` : ""}</div>
+        <p class="c-body">${fmt.esc(c.body)}</p>
+      </div>
+    </div>`;
+  async function loadComments(older = false) {
+    const list = await api(`/api/token/${addr}/comments${older && cOldest ? `?before=${cOldest}` : ""}`);
+    const firstLoad = !older && !cNewest;
+    if (older) {
+      $("cList").insertAdjacentHTML("beforeend", list.map((c) => cRow(c)).join(""));
+    } else {
+      const fresh = list.filter((c) => c.id > cNewest);
+      if (!cNewest) $("cList").innerHTML = list.map((c) => cRow(c)).join("");
+      else if (fresh.length) $("cList").insertAdjacentHTML("afterbegin", fresh.map((c) => cRow(c, true)).join(""));
+    }
+    if (list.length) {
+      cNewest = Math.max(cNewest, list[0].id);
+      cOldest = cOldest ? Math.min(cOldest, list[list.length - 1].id) : list[list.length - 1].id;
+    }
+    if (older || firstLoad) $("cMore").hidden = list.length < 50;
+    if (!$("cList").children.length) $("cList").innerHTML = `<div class="c-empty mute">No comments yet. Start the conversation.</div>`;
+    else $("cList").querySelector(".c-empty")?.remove();
+    drawCount();
+  }
+  function drawCount() {
+    const n = Math.max(tok?.comments ?? 0, $("cList").querySelectorAll(".c-row").length);
+    $("cCount").textContent = n ? fmt.count(n) : "";
+  }
+  $("cMore").addEventListener("click", () => loadComments(true).catch(() => {}));
+  $("cList").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-del]");
+    if (!b || !confirm("Delete this comment?")) return;
+    try { await api("/api/comments/" + b.dataset.del, { method: "DELETE" }); b.closest(".c-row").remove(); if (tok?.comments) tok.comments--; drawCount(); }
+    catch (err) { XL.toast(err.message); }
+  });
+  const cMsg = (t) => { $("cMsg").hidden = !t; if (t) { $("cMsg").className = "notice err"; $("cMsg").textContent = t; } };
+  $("cBody").addEventListener("input", (e) => {
+    e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px";
+    $("cPost").disabled = !e.target.value.trim();
+  });
+  $("cBody").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("cForm").requestSubmit(); });
+  XL.onAuth((me) => {
+    $("cAvatar").innerHTML = me ? XL.avatar(me.avatar, me.handle, 36) : `<span class="post-avatar" style="width:36px;height:36px">?</span>`;
+    $("cBody").placeholder = me ? "Add a comment…" : "Sign in with X to comment…";
+    cNewest = 0; cOldest = 0; loadComments().catch(() => {}); // « supprimer » dépend du compte
+  });
+  $("cBody").addEventListener("focus", () => { if (!XL.me && !XL.isLogged()) XL.login().catch(() => {}); });
+  $("cForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = $("cBody").value.trim();
+    if (!body) return;
+    if (!XL.me) { try { await XL.login(); } catch { return; } }
+    $("cPost").disabled = true; cMsg("");
+    try {
+      const c = await api(`/api/token/${addr}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+      $("cList").querySelector(".c-empty")?.remove();
+      $("cList").insertAdjacentHTML("afterbegin", cRow(c, true));
+      cNewest = Math.max(cNewest, c.id); if (!cOldest) cOldest = c.id;
+      $("cBody").value = ""; $("cBody").style.height = "";
+      if (tok) tok.comments = (tok.comments ?? 0) + 1;
+      drawCount();
+    } catch (err) { cMsg(err.message); }
+    $("cPost").disabled = !$("cBody").value.trim();
+  });
 
   // ------------------------------------------------------------ graphique (SVG fait main)
   let points = [];
@@ -134,7 +217,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     await loadToken();
-    await Promise.all([loadTrades(), loadChart()]);
+    await Promise.all([loadTrades(), loadChart(), loadComments()]);
+    if (location.hash === "#comments") $("comments").scrollIntoView({ block: "start" });
   } catch (e) {
     $("tTitle").textContent = "Token not found";
     $("tSub").textContent = e.message;
@@ -142,6 +226,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   setInterval(() => {
     if (document.hidden) return;
-    loadToken().catch(() => {}); loadTrades().catch(() => {}); loadChart().catch(() => {});
+    loadToken().catch(() => {}); loadTrades().catch(() => {}); loadChart().catch(() => {}); loadComments().catch(() => {});
   }, 5000);
 });
