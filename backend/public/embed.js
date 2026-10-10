@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const opt = (q) => `<option value="${fmt.esc(q.address)}" ${q.symbol === "ETH" ? "selected" : ""} ${q.paused ? "disabled" : ""}>${fmt.esc(q.symbol)} — ${fmt.esc(q.name)}</option>`;
     const crypto = quotes.filter((q) => q.kind !== "stock"), stocks = quotes.filter((q) => q.kind === "stock");
     $("pair").innerHTML = `<optgroup label="Crypto">${crypto.map(opt).join("")}</optgroup>` +
-      (stocks.length ? `<optgroup label="Actions tokenisées">${stocks.map(opt).join("")}</optgroup>` : "");
+      (stocks.length ? `<optgroup label="Tokenized stocks">${stocks.map(opt).join("")}</optgroup>` : "");
   }).catch(() => {});
 
   const showMsg = (t, kind = "err") => { const m = $("msg"); m.hidden = !t; if (t) { m.className = "notice " + kind; m.textContent = t; } };
@@ -34,46 +34,47 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   XL.onAuth((me) => {
-    if (!me) { $("quota").textContent = "Connexion X requise."; $("launchBtn").disabled = false; return; }
+    if (!me) { $("quota").textContent = "Sign in with X to launch."; $("launchBtn").disabled = false; return; }
     if (me.ineligible) { $("quota").textContent = me.ineligible; $("launchBtn").disabled = true; return; }
     const left = Math.max(0, me.perDay - me.launchesLast24h);
-    $("quota").textContent = left ? `${left} lancement${left > 1 ? "s" : ""} disponible${left > 1 ? "s" : ""} aujourd'hui.` : "Limite du jour atteinte.";
+    $("quota").textContent = left ? `${left} launch${left > 1 ? "es" : ""} left today.` : "Daily limit reached.";
     $("launchBtn").disabled = !left;
   });
 
   $("file").addEventListener("change", async () => {
     const f = $("file").files[0];
     if (!f) return;
-    if (f.size > 1024 * 1024) { showMsg("Ce logo dépasse 1 Mo."); return; }
-    if (!(await ensureLogin())) { showMsg("Connecte-toi avec X pour ajouter un logo."); return; }
-    $("fileInfo").textContent = "Envoi…";
+    if (f.size > 1024 * 1024) { showMsg("This logo is over 1 MB."); return; }
+    if (!(await ensureLogin())) { showMsg("Sign in with X to add a logo."); return; }
+    $("fileInfo").textContent = "Uploading…";
     try {
       imageUrl = (await api("/api/upload", { method: "POST", body: f, headers: { "Content-Type": f.type } })).url;
       $("coin").innerHTML = `<img src="${fmt.esc(imageUrl)}" alt="">`;
       $("fileInfo").textContent = f.name; showMsg("");
-    } catch (e) { imageUrl = ""; $("fileInfo").textContent = "1 Mo max."; showMsg(e.message); }
+    } catch (e) { imageUrl = ""; $("fileInfo").textContent = "1 MB max."; showMsg(e.message); }
   });
 
   $("composer").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = $("name").value.trim(), symbol = $("symbol").value.trim();
-    if (!name) return showMsg("Donne un nom à ton token.");
-    if (symbol.length < 2) return showMsg("Le ticker doit faire au moins 2 caractères.");
+    if (!name) return showMsg("Give your token a name.");
+    if (symbol.length < 2) return showMsg("The ticker needs at least 2 characters.");
     showMsg("");
-    if (!(await ensureLogin())) return showMsg("Connecte-toi avec X pour lancer ton token.");
+    if (!(await ensureLogin())) return showMsg("Sign in with X to launch your token.");
     const btn = $("launchBtn");
-    btn.disabled = true; btn.textContent = "Déploiement sur Base…";
+    btn.disabled = true; btn.textContent = "Deploying on Base…";
     try {
       const r = await api("/api/launch", { method: "POST", body: JSON.stringify({ name, symbol, image: imageUrl, description: $("description").value.trim(), quote: $("pair").value }) });
       $("composer").hidden = true; $("done").hidden = false;
       $("done").scrollIntoView({ block: "start", behavior: "smooth" });
-      $("doneTitle").textContent = `$${symbol} est en ligne.`;
-      $("doneShare").innerHTML = `${XL.X_SVG} Partager sur X`;
-      $("doneShare").href = XL.tweetUrl(`Je viens de lancer $${symbol} sur Base 🔵`, r.share);
+      $("doneTitle").textContent = `$${symbol} is live.`;
+      $("doneShare").innerHTML = `${XL.X_SVG} Share on X`;
+      $("doneShare").href = XL.tweetUrl(`I just launched $${symbol} on Base 🔵`, r.share);
+      XL.coinRain({ symbol, token: r.token, image: imageUrl }, 16);
       $("donePage").href = "/t/" + r.token;
       loadRecent();
     } catch (err) { showMsg(err.message); }
-    finally { btn.textContent = "Lancer sur Base"; btn.disabled = false; }
+    finally { btn.textContent = "Launch on Base"; btn.disabled = false; }
   });
 
   async function loadRecent() {
@@ -83,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? rows.map((t) => `<a href="/t/${fmt.esc(t.token)}" target="_blank" rel="noopener">${XL.coin(t, 30)}
             <span><b>$${fmt.esc(t.symbol)}</b> ${XL.pair(t.quote)}<br><span class="mute">@${fmt.esc(t.creator)}</span></span>
             <span class="r">${fmt.usd(t.mcapUsd)}<br>${fmt.pct(t.change24h)}</span></a>`).join("")
-        : `<span class="mute">Aucun token pour l'instant.</span>`;
+        : `<span class="mute">No tokens yet.</span>`;
     } catch {}
   }
 
@@ -94,11 +95,11 @@ document.addEventListener("DOMContentLoaded", () => {
       $("tokenCard").hidden = false; $("composer").hidden = true; $("recentCard").hidden = true;
       $("tCoin").innerHTML = XL.coin(t, 52);
       $("tTitle").textContent = `$${t.symbol}`;
-      $("tBy").innerHTML = `${fmt.esc(t.name)}, par @${fmt.esc(t.creator)} ${XL.pair(t.quote)}`;
+      $("tBy").innerHTML = `${fmt.esc(t.name)}, by @${fmt.esc(t.creator)} ${XL.pair(t.quote)}`;
       $("tMcap").textContent = fmt.usd(t.mcapUsd);
       $("tChange").innerHTML = fmt.pct(t.change24h);
       $("tBuy").href = t.trade;
-      $("tBuy").textContent = `Acheter avec ${t.quote.symbol}`;
+      $("tBuy").textContent = `Buy with ${t.quote.symbol}`;
       $("tOpen").href = "/t/" + t.token;
     }).catch(() => {});
     $("tOwn").onclick = () => { $("tokenCard").hidden = true; $("composer").hidden = false; $("recentCard").hidden = false; };

@@ -22,42 +22,46 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("tTitle").textContent = `$${t.symbol}`;
       $("tSub").innerHTML = `${fmt.esc(t.name)} ${XL.pair(t.quote)}`;
       $("tBuy").href = t.trade;
-      $("tBuy").querySelector("span").textContent = `Acheter avec ${t.quote.symbol}`;
-      $("tShare").href = XL.tweetUrl(`$${t.symbol} sur Base, lancé depuis X`, t.share);
-      $("tCopy").onclick = () => XL.copy(t.token, "Adresse copiée");
+      $("tBuy").querySelector("span").textContent = `Buy with ${t.quote.symbol}`;
+      $("tShare").href = XL.tweetUrl(`$${t.symbol} on Base, launched from X`, t.share);
+      $("tCopy").onclick = () => XL.copy(t.token, "Address copied");
+      document.querySelector(".detail-card").style.setProperty("--h", XL.hue(t.token));
       $("fPair").innerHTML = XL.pair(t.quote);
       $("fAddr").textContent = fmt.short(t.token);
       $("fAddr").href = `${cfg.explorer}/token/${t.token}`;
       $("fPool").textContent = fmt.short(t.pool);
       $("fPool").href = `${cfg.explorer}/address/${t.pool}`;
       const d = new Date(t.createdAt * 1000);
-      $("tMeta").dataset.when = `${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`;
+      $("tMeta").dataset.when = `${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     }
-    $("kMcap").textContent = fmt.usd(t.mcapUsd);
-    $("kPrice").textContent = fmt.price(t.priceUsd) + " $";
-    $("kPrice").title = `${fmt.price(t.price)} ${t.quote.symbol} par token`;
+    const fl = (el, key, v) => { el.className = "num " + XL.flash(key, v); };
+    $("kMcap").textContent = fmt.usd(t.mcapUsd); fl($("kMcap"), "k:m", t.mcapUsd);
+    $("kPrice").textContent = "$" + fmt.price(t.priceUsd); fl($("kPrice"), "k:p", t.priceUsd);
+    $("kPrice").title = `${fmt.price(t.price)} ${t.quote.symbol} per token`;
     $("kChange").innerHTML = fmt.pct(t.change24h);
-    $("kVol").textContent = fmt.usd(t.volume24hUsd);
+    $("kVol").textContent = fmt.usd(t.volume24hUsd); fl($("kVol"), "k:v", t.volume24hUsd);
     $("fFees").textContent = fmt.usd(t.creatorFeesUsd);
-    $("hSub").textContent = `${fmt.count(t.trades)} trade${t.trades > 1 ? "s" : ""}`;
-    $("tMeta").innerHTML = `${$("tMeta").dataset.when} · <b style="color:var(--ink)">${fmt.count(t.trades)}</b> trades · <b style="color:var(--ink)">${fmt.usd(t.creatorFeesUsd)}</b> pour le créateur`;
+    $("hSub").textContent = `${fmt.count(t.trades)} trade${t.trades === 1 ? "" : "s"}`;
+    $("tMeta").innerHTML = `${$("tMeta").dataset.when} · <b style="color:var(--ink)">${fmt.count(t.trades)}</b> trades · <b style="color:var(--ink)">${fmt.usd(t.creatorFeesUsd)}</b> to the creator`;
   }
 
   async function loadTrades() {
     const rows = await api(`/api/token/${addr}/trades?limit=40`);
     const sym = tok?.quote?.symbol ?? "";
-    const n = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 2 });
+    const n = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
+    const known = new Set([...$("trades").querySelectorAll("[data-tx]")].map((x) => x.dataset.tx));
     $("noTrades").hidden = !!rows.length;
-    $("tradeCount").textContent = rows.length ? `les ${rows.length} derniers` : "";
+    $("tradeCount").textContent = rows.length ? `latest ${rows.length}` : "";
     $("trades").innerHTML = rows.map((r) => {
       const buy = r.side === "buy";
-      return `<div class="reply">
+      const fresh = known.size && !known.has(r.txHash);
+      return `<div class="reply${fresh ? " post-enter" : ""}" data-tx="${r.txHash}">
         <span class="reply-dot ${buy ? "buy" : "sell"}">${XL.icon(buy ? "up" : "down", "sm")}</span>
         <div class="reply-body">
           <div><a href="${cfg.explorer}/address/${r.trader}" target="_blank" rel="noopener">${fmt.short(r.trader)}</a>
             <span class="mute">· <a class="mute" style="color:inherit" href="${cfg.explorer}/tx/${r.txHash}" target="_blank" rel="noopener">${fmt.ago(r.ts)}</a></span></div>
-          <div>${buy ? "a acheté" : "a vendu"} <b>${n.format(r.tokens)} $${fmt.esc(tok?.symbol ?? "")}</b>
-            ${buy ? "pour" : "contre"} <b>${fmt.esc(fmt.amount(r.quoteAmount, sym))}</b> <span class="mute">(${fmt.usd(r.usd)})</span></div>
+          <div>${buy ? "bought" : "sold"} <b>${n.format(r.tokens)} $${fmt.esc(tok?.symbol ?? "")}</b>
+            ${buy ? "for" : "for"} <b>${fmt.esc(fmt.amount(r.quoteAmount, sym))}</b> <span class="mute">(${fmt.usd(r.usd)})</span></div>
         </div>
       </div>`;
     }).join("");
@@ -65,12 +69,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ------------------------------------------------------------ graphique (SVG fait main)
   let points = [];
+  let drawn = false;
   let chartUsd = 0;
   let quoteSym = "";
   async function loadChart() {
     const c = await api(`/api/token/${addr}/chart`);
     points = c.points; chartUsd = c.usd; quoteSym = c.quote;
-    $("chartTitle").textContent = `Prix en ${c.quote}`;
+    $("chartTitle").textContent = `Price in ${c.quote}`;
     drawChart();
   }
   function drawChart() {
@@ -94,20 +99,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const area = `${d}V${H - pad.b}H${x(pts[0].ts)}Z`;
     const col = pts[pts.length - 1].price >= pts[0].price ? "var(--up)" : "var(--down)";
     const dur = t1 - t0;
-    const label = (ts) => new Date(ts * 1000).toLocaleString("fr-FR", dur > 172800 ? { day: "numeric", month: "short" } : { hour: "2-digit", minute: "2-digit" });
+    const label = (ts) => new Date(ts * 1000).toLocaleString("en-US", dur > 172800 ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" });
 
     box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
       <defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".2"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
       <line x1="${pad.l}" x2="${W - pad.r}" y1="${y(points[0].price)}" y2="${y(points[0].price)}" stroke="var(--line)" stroke-dasharray="4 4"/>
-      <path d="${area}" fill="url(#fill)"/>
-      <path d="${d}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <path class="fill${drawn ? "" : " draw"}" d="${area}" fill="url(#fill)"/>
+      <path class="line${drawn ? "" : " draw"}" d="${d}" fill="none" stroke="${col}" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
       <text x="${pad.l}" y="${H - 4}" fill="var(--mute)" font-size="12">${label(t0)}</text>
-      <text x="${W - pad.r}" y="${H - 4}" fill="var(--mute)" font-size="12" text-anchor="end">maintenant</text>
+      <text x="${W - pad.r}" y="${H - 4}" fill="var(--mute)" font-size="12" text-anchor="end">now</text>
       <line id="cx" y1="${pad.t}" y2="${H - pad.b}" stroke="var(--mute)" stroke-width="1" opacity="0"/>
       <circle id="cd" r="4" fill="${col}" opacity="0"/>
     </svg><div class="tip" hidden></div>`;
 
     const svg = box.querySelector("svg"), tip = box.querySelector(".tip"), cx = svg.getElementById("cx"), cd = svg.getElementById("cd");
+    // le graphique se dessine une seule fois, à l'ouverture de la page
+    if (!drawn) { const line = svg.querySelector(".line"); line.style.setProperty("--len", Math.ceil(line.getTotalLength() + 10)); drawn = true; }
     const move = (clientX) => {
       const r = svg.getBoundingClientRect();
       const ts = t0 + ((clientX - r.left) / r.width) * (t1 - t0);
@@ -118,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       cd.setAttribute("cx", px); cd.setAttribute("cy", y(p.price)); cd.setAttribute("opacity", "1");
       tip.hidden = false;
       tip.style.left = Math.min(Math.max((px / W) * r.width, 90), r.width - 90) + "px";
-      tip.textContent = `${fmt.price(p.price)} ${quoteSym}, soit ${fmt.usd(p.price * 1e9 * chartUsd)} de market cap`;
+      tip.textContent = `${fmt.price(p.price)} ${quoteSym} · ${fmt.usd(p.price * 1e9 * chartUsd)} market cap`;
     };
     svg.addEventListener("pointermove", (e) => move(e.clientX));
     svg.addEventListener("pointerleave", () => { tip.hidden = true; cx.setAttribute("opacity", "0"); cd.setAttribute("opacity", "0"); });
@@ -129,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadToken();
     await Promise.all([loadTrades(), loadChart()]);
   } catch (e) {
-    $("tTitle").textContent = "Token introuvable";
+    $("tTitle").textContent = "Token not found";
     $("tSub").textContent = e.message;
     return;
   }

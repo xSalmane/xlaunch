@@ -7,7 +7,7 @@ import { config, blocklist, explorer } from "./config.js";
 import { authRouter, requireAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
 import { launchesRepo, claimsRepo } from "./db.js";
 import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps } from "./chain.js";
-import { listTokens, getToken, trades, chart, globalStats } from "./market.js";
+import { listTokens, getToken, trades, chart, globalStats, activity } from "./market.js";
 import { initQuotes, getQuotes, quoteOf, mintTestStocks } from "./quotes.js";
 import { startIndexer } from "./indexer.js";
 
@@ -71,23 +71,23 @@ function render(file: string, meta: { title: string; description: string; player
 
 app.get("/", (_req, res) => {
   res.type("html").send(render("index.html", {
-    title: "XLaunch — lance ton token sur Base depuis X",
-    description: "Un nom, un ticker, un clic. Le gas est offert et tu touches une part des frais de trading.",
+    title: "XLaunch — launch your token on Base, right from X",
+    description: "A name, a ticker, one click. Gas is on us, and you earn a share of every trade.",
     player: `${config.publicUrl}/embed`,
   }));
 });
 app.get("/explore", (_req, res) => {
-  res.type("html").send(render("explore.html", { title: "Explorer — XLaunch", description: "Tous les tokens lancés depuis X sur Base." }));
+  res.type("html").send(render("explore.html", { title: "Explore — XLaunch", description: "Every token launched from X on Base." }));
 });
 app.get("/me", (_req, res) => {
-  res.type("html").send(render("me.html", { title: "Mes gains — XLaunch", description: "Tes tokens et tes frais de trading." }));
+  res.type("html").send(render("me.html", { title: "Earnings — XLaunch", description: "Your tokens and your trading fees." }));
 });
 app.get("/t/:token", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).type("html").send(render("404.html", { title: "Token introuvable — XLaunch", description: "" }));
+  if (!row) return res.status(404).type("html").send(render("404.html", { title: "Token not found — XLaunch", description: "" }));
   res.type("html").send(render("token.html", {
     title: `$${row.symbol} — ${row.name}`,
-    description: row.description || `Lancé par @${row.handle} sur Base via XLaunch.`,
+    description: row.description || `Launched by @${row.handle} on Base via XLaunch.`,
     player: `${config.publicUrl}/embed?token=${row.token}`,
   }));
 });
@@ -108,6 +108,7 @@ app.get("/api/config", async (_req, res) => {
 });
 
 app.get("/api/stats", (_req, res) => res.json(globalStats()));
+app.get("/api/activity", (_req, res) => res.json(activity(24)));
 
 /** actifs avec lesquels on peut apparier un nouveau token */
 app.get("/api/quotes", (_req, res) => {
@@ -134,19 +135,19 @@ app.get("/api/recent", async (_req, res) => {
 
 app.get("/api/token/:token", async (req, res) => {
   const t = isAddress(req.params.token) ? getToken(req.params.token, await creatorFeeBps()) : undefined;
-  if (!t) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
+  if (!t) return res.status(404).json({ error: "No XLaunch token at this address." });
   res.json({ ...t, explorer: `${explorer}/token/${t.token}` });
 });
 
 app.get("/api/token/:token/trades", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
+  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
   res.json(trades(row, Number(req.query.limit ?? 50)));
 });
 
 app.get("/api/token/:token/chart", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).json({ error: "Aucun token XLaunch à cette adresse." });
+  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
   res.json(chart(row));
 });
 
@@ -179,15 +180,15 @@ app.post(
   (req, res) => {
     const s = res.locals.session as Session;
     const buf = req.body as Buffer;
-    if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Choisis une image PNG, JPG, GIF ou WebP de 1 Mo maximum." });
+    if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Pick a PNG, JPG, GIF or WebP image, 1 MB max." });
     const kind = MAGIC.find(([, sig]) => sig.every((b, i) => buf[i] === b));
     if (!kind || (kind[0] === "webp" && buf.subarray(8, 12).toString() !== "WEBP"))
-      return res.status(400).json({ error: "Ce fichier n'est pas une image PNG, JPG, GIF ou WebP." });
+      return res.status(400).json({ error: "This file isn't a PNG, JPG, GIF or WebP image." });
 
     const day = Math.floor(Date.now() / 86_400_000);
     const u = uploadsToday.get(s.sub);
     const n = u && u.day === day ? u.n : 0;
-    if (n >= 20) return res.status(429).json({ error: "Limite de 20 images par jour atteinte." });
+    if (n >= 20) return res.status(429).json({ error: "You've reached the limit of 20 images per day." });
     uploadsToday.set(s.sub, { n: n + 1, day });
 
     const name = `${crypto.randomBytes(16).toString("hex")}.${kind[0]}`;
@@ -208,27 +209,27 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   const description = String(req.body?.description ?? "").trim().slice(0, 280);
   const quote = quoteOf(String(req.body?.quote ?? config.weth));
 
-  if (!NAME_RE.test(name)) return res.status(400).json({ error: "Le nom doit faire 1 à 32 caractères (lettres, chiffres, espaces)." });
-  if (!SYMBOL_RE.test(symbol)) return res.status(400).json({ error: "Le ticker doit faire 2 à 10 lettres ou chiffres." });
-  if (image && !IMAGE_RE.test(image)) return res.status(400).json({ error: "Ajoute l'image avec le bouton d'import." });
-  if (!quote) return res.status(400).json({ error: "Cette paire n'est pas disponible. Choisis ETH, USDC ou une action de la liste." });
-  if (quote.paused) return res.status(400).json({ error: `${quote.symbol} est suspendu par son émetteur en ce moment. Choisis une autre paire.` });
+  if (!NAME_RE.test(name)) return res.status(400).json({ error: "The name must be 1 to 32 characters (letters, numbers, spaces)." });
+  if (!SYMBOL_RE.test(symbol)) return res.status(400).json({ error: "The ticker must be 2 to 10 letters or numbers." });
+  if (image && !IMAGE_RE.test(image)) return res.status(400).json({ error: "Add the image with the upload button." });
+  if (!quote) return res.status(400).json({ error: "This pair isn't available. Pick ETH, USDC or a stock from the list." });
+  if (quote.paused) return res.status(400).json({ error: `${quote.symbol} is currently paused by its issuer. Pick another pair.` });
 
   const hay = `${name} ${symbol}`.toLowerCase();
-  if (blocklist.some((w) => hay.includes(w))) return res.status(400).json({ error: "Ce nom ou ce ticker n'est pas autorisé. Choisis-en un autre." });
+  if (blocklist.some((w) => hay.includes(w))) return res.status(400).json({ error: "This name or ticker isn't allowed. Pick another one." });
 
   const why = eligibility(s);
   if (why) return res.status(403).json({ error: why });
-  if (!(await relayerHasFunds())) return res.status(503).json({ error: "Les lancements sont en pause pour le moment. Réessaie un peu plus tard." });
+  if (!(await relayerHasFunds())) return res.status(503).json({ error: "Launches are paused for now. Try again a bit later." });
 
   const slot = launchesRepo.reserve(
     { xId: s.sub, handle: s.handle, name, symbol, image, description, quote: quote.address, quoteSymbol: quote.symbol, quoteDecimals: quote.decimals, avatar: s.avatar },
     config.launchesPerUserPerDay, config.globalLaunchesPerHour
   );
-  if (slot === "symbol_taken") return res.status(409).json({ error: `Le ticker $${symbol} existe déjà. Choisis-en un autre.` });
-  if (slot === "pending") return res.status(429).json({ error: "Ton lancement précédent est encore en cours." });
-  if (slot === "user_limit") return res.status(429).json({ error: `Tu as atteint ta limite de ${config.launchesPerUserPerDay} lancement(s) par 24 h.` });
-  if (slot === "global_limit") return res.status(429).json({ error: "Beaucoup de lancements en ce moment. Réessaie dans quelques minutes." });
+  if (slot === "symbol_taken") return res.status(409).json({ error: `The ticker $${symbol} already exists. Pick another one.` });
+  if (slot === "pending") return res.status(429).json({ error: "Your previous launch is still in progress." });
+  if (slot === "user_limit") return res.status(429).json({ error: `You've reached your limit of ${config.launchesPerUserPerDay} launch(es) per 24 hours.` });
+  if (slot === "global_limit") return res.status(429).json({ error: "Lots of launches right now. Try again in a few minutes." });
 
   try {
     const r = await launchToken({ name, symbol, image, xId: s.sub, quote });
@@ -237,7 +238,7 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   } catch (e) {
     console.error("launch", e);
     launchesRepo.markFailed(slot, String(e));
-    res.status(500).json({ error: "Le déploiement a échoué. Ton quota n'est pas consommé, tu peux réessayer." });
+    res.status(500).json({ error: "The deployment failed. It didn't count against your quota, so you can try again." });
   }
 });
 
@@ -267,10 +268,10 @@ const claiming = new Set<string>();
 app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, res) => {
   const s = res.locals.session as Session;
   const recipient = String(req.body?.recipient ?? "").trim();
-  if (!isAddress(recipient)) return res.status(400).json({ error: "Cette adresse n'est pas une adresse Base valide (0x suivi de 40 caractères)." });
+  if (!isAddress(recipient)) return res.status(400).json({ error: "This isn't a valid Base address (0x followed by 40 characters)." });
   if (Date.now() / 1000 - s.iat > config.claimMaxAuthAgeSec)
-    return res.status(401).json({ error: "Pour réclamer, reconnecte-toi avec X (sécurité).", reauth: true });
-  if (claiming.has(s.sub)) return res.status(429).json({ error: "Une réclamation est déjà en cours." });
+    return res.status(401).json({ error: "For security, sign in with X again to claim.", reauth: true });
+  if (claiming.has(s.sub)) return res.status(429).json({ error: "A claim is already in progress." });
 
   claiming.add(s.sub);
   try {
@@ -281,7 +282,7 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
     res.json({ ...r, explorer: `${explorer}/tx/${r.txHash}` });
   } catch (e) {
     console.error("claim", e);
-    res.status(500).json({ error: "La réclamation a échoué. Tes gains sont toujours en séquestre, tu peux réessayer." });
+    res.status(500).json({ error: "The claim failed. Your earnings are still held in escrow, so you can try again." });
   } finally {
     claiming.delete(s.sub);
   }
@@ -301,11 +302,11 @@ function creatorAssets(items: { token: string; quote: string }[]): Address[] {
 const faucetUsed = new Map<string, number>();
 app.post("/api/test-faucet", requireAuth, express.json({ limit: "2kb" }), async (req, res) => {
   const s = res.locals.session as Session;
-  if (!getQuotes().some((q) => q.mock)) return res.status(404).json({ error: "Pas de robinet de test sur ce réseau." });
+  if (!getQuotes().some((q) => q.mock)) return res.status(404).json({ error: "There's no test faucet on this network." });
   const to = String(req.body?.address ?? "").trim();
-  if (!isAddress(to)) return res.status(400).json({ error: "Cette adresse n'est pas valide (0x suivi de 40 caractères)." });
+  if (!isAddress(to)) return res.status(400).json({ error: "This address isn't valid (0x followed by 40 characters)." });
   const last = faucetUsed.get(s.sub) ?? 0;
-  if (Date.now() - last < 3_600_000) return res.status(429).json({ error: "Robinet déjà utilisé : réessaie dans une heure." });
+  if (Date.now() - last < 3_600_000) return res.status(429).json({ error: "You already used the faucet. Try again in an hour." });
   faucetUsed.set(s.sub, Date.now());
   try {
     const symbols = await mintTestStocks(getAddress(to));
@@ -313,15 +314,15 @@ app.post("/api/test-faucet", requireAuth, express.json({ limit: "2kb" }), async 
   } catch (e) {
     faucetUsed.delete(s.sub);
     console.error("faucet", e);
-    res.status(500).json({ error: "L'envoi a échoué. Réessaie dans un instant." });
+    res.status(500).json({ error: "Sending failed. Try again in a moment." });
   }
 });
 
-app.use("/api", (_req, res) => res.status(404).json({ error: "Route inconnue." }));
-app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page introuvable — XLaunch", description: "" })));
+app.use("/api", (_req, res) => res.status(404).json({ error: "Unknown route." }));
+app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page not found — XLaunch", description: "" })));
 
 await initQuotes();
 startIndexer();
 app.listen(config.port, () => {
-  console.log(`XLaunch sur ${config.publicUrl} (port ${config.port}) — chaîne ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — connexion démo active" : ""}`);
+  console.log(`XLaunch on ${config.publicUrl} (port ${config.port}) — chain ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — demo login enabled" : ""}`);
 });

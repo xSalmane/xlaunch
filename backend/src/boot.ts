@@ -68,20 +68,20 @@ async function installFactory() {
   );
 
   let balance = 0n;
-  let status = "En attente d'ETH sur le wallet relayer.";
+  let status = "Waiting for ETH on the relayer wallet.";
 
   const server = http.createServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-    res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="10"><title>XLaunch — installation</title>
+    res.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="10"><title>XLaunch — setup</title>
 <body style="font-family:system-ui;max-width:640px;margin:48px auto;padding:0 16px;line-height:1.5;color:#0b1b3f;background:#f3f6fc">
-<h1 style="margin-bottom:4px">XLaunch s'installe</h1>
-<p style="color:#5a6a8a;margin-top:0">${chain.name}. Cette page se met à jour toute seule.</p>
+<h1 style="margin-bottom:4px">XLaunch is setting up</h1>
+<p style="color:#5a6a8a;margin-top:0">${chain.name}. This page refreshes on its own.</p>
 <p><b>${status}</b></p>
-<p>Envoie au moins <b>${formatEther(NEEDED)} ETH ${chain.id === 84532 ? "de test (Base Sepolia)" : "sur Base"}</b> à cette adresse. Elle paie le déploiement du contrat puis le gas des lancements :</p>
+<p>Send at least <b>${formatEther(NEEDED)} ${chain.id === 84532 ? "test ETH (Base Sepolia)" : "ETH on Base"}</b> to this address. It pays for deploying the contract, then for the gas of every launch:</p>
 <p style="font:16px ui-monospace,monospace;background:#fff;border:1px solid #d5deee;padding:12px;border-radius:8px;word-break:break-all">${relayer.address}</p>
-<p>Solde actuel : <b>${formatEther(balance)} ETH</b></p>
-${chain.id === 84532 ? `<p style="color:#5a6a8a">ETH de test gratuit : faucet Coinbase Developer Platform (choisis Base Sepolia).</p>` : ""}
+<p>Current balance: <b>${formatEther(balance)} ETH</b></p>
+${chain.id === 84532 ? `<p style="color:#5a6a8a">Free test ETH: Coinbase Developer Platform faucet (pick Base Sepolia).</p>` : ""}
 </body></html>`);
   });
   const port = Number(env.PORT ?? 8787);
@@ -92,7 +92,7 @@ ${chain.id === 84532 ? `<p style="color:#5a6a8a">ETH de test gratuit : faucet Co
     try {
       balance = await pub.getBalance({ address: relayer.address });
       if (balance >= NEEDED) {
-        status = "ETH reçu. Déploiement du contrat en cours…";
+        status = "ETH received. Deploying the contract…";
         const owner = (env.OWNER_ADDRESS ?? relayer.address) as Address;
         const treasury = (env.TREASURY_ADDRESS ?? relayer.address) as Address;
         const hash = await wallet.deployContract({
@@ -108,7 +108,7 @@ ${chain.id === 84532 ? `<p style="color:#5a6a8a">ETH de test gratuit : faucet Co
         break;
       }
     } catch (e) {
-      status = "Erreur temporaire, nouvelle tentative dans 15 s.";
+      status = "Temporary error, retrying in 15 seconds.";
       console.error("installation", (e as Error).message);
     }
     await new Promise((r) => setTimeout(r, 15_000));

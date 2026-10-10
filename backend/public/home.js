@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const sym = $("symbol").value.replace(/[^a-z0-9]/gi, "").toUpperCase();
     if (sym !== $("symbol").value) $("symbol").value = sym;
     $("coin").style.setProperty("--h", hue(sym || "X"));
+    $("coin").classList.remove("bump"); void $("coin").offsetWidth; $("coin").classList.add("bump");
     if (!imageUrl) $("coin").textContent = sym ? sym.slice(0, 4) : "$";
     const used = $("description").value.length;
     $("chars").textContent = used ? `${280 - used}` : "";
@@ -38,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("pairNow").addEventListener("click", () => togglePairs());
   XL.pairPicker($("pairs"), (q) => {
     if (!q) return;
-    $("pairNow").innerHTML = `${q.icon ? `<img src="${fmt.esc(q.icon)}" alt="" referrerpolicy="no-referrer">` : ""}Paire : ${fmt.esc(q.symbol)} ▾`;
-    $("pairHint").textContent = q.test ? `${q.symbol} est une action de test, sans valeur.` : "";
+    $("pairNow").innerHTML = `${q.icon ? `<img src="${fmt.esc(q.icon)}" alt="" referrerpolicy="no-referrer">` : ""}Pair: ${fmt.esc(q.symbol)} ▾`;
+    $("pairHint").textContent = q.test ? `${q.symbol} is a test stock with no value.` : "";
   }).then((fn) => (getPair = fn));
 
   function showMsg(text, kind = "err") {
@@ -67,8 +68,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("file").addEventListener("change", async () => {
     const f = $("file").files[0];
     if (!f) return;
-    if (f.size > 1024 * 1024) { showMsg("Ce logo dépasse 1 Mo. Choisis une image plus légère."); $("file").value = ""; return; }
-    if (!(await ensureLogin())) { showMsg("Connecte-toi avec X pour ajouter un logo."); $("file").value = ""; return; }
+    if (f.size > 1024 * 1024) { showMsg("This logo is over 1 MB. Pick a lighter image."); $("file").value = ""; return; }
+    if (!(await ensureLogin())) { showMsg("Sign in with X to add a logo."); $("file").value = ""; return; }
     try {
       const r = await api("/api/upload", { method: "POST", body: f, headers: { "Content-Type": f.type } });
       setLogo(r.url); showMsg("");
@@ -77,10 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ------------------------------------------------------------ quota
   XL.onAuth((me) => {
-    if (!me) { $("quota").textContent = "Connexion X requise. Gas offert."; $("launchBtn").disabled = false; return; }
+    if (!me) { $("quota").textContent = "Sign in with X to launch. Gas is on us."; $("launchBtn").disabled = false; return; }
     if (me.ineligible) { $("quota").textContent = me.ineligible; $("launchBtn").disabled = true; return; }
     const left = Math.max(0, me.perDay - me.launchesLast24h);
-    $("quota").textContent = left ? `${left} lancement${left > 1 ? "s" : ""} dispo aujourd'hui` : "Limite du jour atteinte";
+    $("quota").textContent = left ? `${left} launch${left > 1 ? "es" : ""} left today` : "Daily limit reached";
     $("launchBtn").disabled = !left;
   });
 
@@ -90,15 +91,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (busy) return;
     const name = $("name").value.trim();
     const symbol = $("symbol").value.trim();
-    if (!name) { showMsg("Donne un nom à ton token."); $("name").focus(); return; }
-    if (symbol.length < 2) { showMsg("Le ticker doit faire au moins 2 caractères."); $("symbol").focus(); return; }
+    if (!name) { showMsg("Give your token a name."); $("name").focus(); return; }
+    if (symbol.length < 2) { showMsg("The ticker needs at least 2 characters."); $("symbol").focus(); return; }
     showMsg("");
-    if (!(await ensureLogin())) { showMsg("Connecte-toi avec X pour lancer ton token."); return; }
+    if (!(await ensureLogin())) { showMsg("Sign in with X to launch your token."); return; }
     if (XL.me?.ineligible) { showMsg(XL.me.ineligible); return; }
 
     busy = true;
     const btn = $("launchBtn");
-    btn.disabled = true; btn.textContent = "Déploiement…";
+    btn.disabled = true; btn.textContent = "Deploying…";
     try {
       const r = await api("/api/launch", {
         method: "POST",
@@ -106,9 +107,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       $("doneCoin").innerHTML = XL.coin({ symbol, token: r.token, image: imageUrl }, 48);
       $("doneCoin").firstElementChild.classList.add("pulse");
-      $("doneTitle").textContent = `$${symbol} est en ligne.`;
-      $("doneShare").innerHTML = `${XL.X_SVG} Partager sur X`;
-      $("doneShare").href = XL.tweetUrl(`Je viens de lancer $${symbol} sur Base 🔵`, r.share);
+      $("doneTitle").textContent = `$${symbol} is live.`;
+      $("doneShare").innerHTML = `${XL.X_SVG} Share on X`;
+      $("doneShare").href = XL.tweetUrl(`I just launched $${symbol} on Base 🔵`, r.share);
+      XL.coinRain({ symbol, token: r.token, image: imageUrl });
       $("donePage").href = "/t/" + r.token;
       $("compose").hidden = true; $("done").hidden = false;
       XL.refreshMe();
@@ -117,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showMsg(err.message);
     } finally {
       busy = false;
-      btn.textContent = "Lancer";
+      btn.textContent = "Launch";
       if (XL.me && !XL.me.ineligible) btn.disabled = false;
     }
   });
@@ -132,6 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ouvert depuis « Lancer un token » (/#compose)
   if (location.hash === "#compose") setTimeout(() => $("name").focus(), 50);
   window.addEventListener("hashchange", () => { if (location.hash === "#compose") $("name").focus(); });
+
+  // ------------------------------------------------------------ bande des trades en direct
+  XL.tape($("tape"));
 
   // ------------------------------------------------------------ fil
   const PAGE = 20;

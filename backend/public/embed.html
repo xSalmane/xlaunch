@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -57,52 +57,52 @@
     <div class="e-head"><div id="tCoin"></div><div><h1 id="tTitle"></h1><div class="mute" id="tBy"></div></div></div>
     <dl class="e-stats">
       <div><dt>Market cap</dt><dd id="tMcap"></dd></div>
-      <div><dt>Variation 24 h</dt><dd id="tChange"></dd></div>
+      <div><dt>24h change</dt><dd id="tChange"></dd></div>
     </dl>
-    <a class="btn wide" id="tBuy" target="_blank" rel="noopener">Acheter sur Uniswap</a>
-    <a class="btn quiet wide" id="tOpen" target="_blank" rel="noopener">Voir le graphique et les trades</a>
-    <button class="btn quiet wide" type="button" id="tOwn">Lancer mon propre token</button>
+    <a class="btn wide" id="tBuy" target="_blank" rel="noopener">Buy on Uniswap</a>
+    <a class="btn quiet wide" id="tOpen" target="_blank" rel="noopener">See chart and trades</a>
+    <button class="btn quiet wide" type="button" id="tOwn">Launch my own token</button>
   </section>
 
   <!-- lancement -->
   <form class="e-card" id="composer" novalidate>
     <div class="e-head">
       <div class="coin" id="coin" style="--s:40px;--h:220">$</div>
-      <div><h1>Lance ton token</h1><div class="mute" style="font-size:13px">Sur Base, gas offert.</div></div>
+      <div><h1>Launch your token</h1><div class="mute" style="font-size:13px">On Base, gas on us.</div></div>
     </div>
     <div class="e-pair">
-      <label class="field"><span>Nom</span><input class="input" id="name" maxlength="32" autocomplete="off" placeholder="Croissant"></label>
-      <label class="field"><span>Ticker</span><input class="input ticker-input" id="symbol" maxlength="10" autocomplete="off" placeholder="CRSNT"></label>
+      <label class="field"><span>Name</span><input class="input" id="name" maxlength="32" autocomplete="off" placeholder="Moon Cat"></label>
+      <label class="field"><span>Ticker</span><input class="input ticker-input" id="symbol" maxlength="10" autocomplete="off" placeholder="MCAT"></label>
     </div>
-    <label class="field"><span>Apparier avec</span>
+    <label class="field"><span>Pair with</span>
       <select class="input" id="pair"><option>ETH</option></select>
     </label>
-    <label class="field"><span>Description <small>(optionnelle)</small></span>
-      <textarea class="input" id="description" maxlength="280" placeholder="En une phrase, pourquoi ce token ?"></textarea>
+    <label class="field"><span>Description <small>(optional)</small></span>
+      <textarea class="input" id="description" maxlength="280" placeholder="In one line, why this token?"></textarea>
     </label>
     <div class="upload">
-      <label class="btn quiet small" for="file">Ajouter un logo</label>
+      <label class="btn quiet small" for="file">Add a logo</label>
       <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp">
-      <span class="mute" id="fileInfo" style="font-size:12px">1 Mo max.</span>
+      <span class="mute" id="fileInfo" style="font-size:12px">1 MB max.</span>
     </div>
     <div class="notice" id="msg" role="alert" hidden></div>
-    <button class="btn wide" type="submit" id="launchBtn">Lancer sur Base</button>
+    <button class="btn wide" type="submit" id="launchBtn">Launch on Base</button>
     <div class="mute" id="quota" style="font-size:12px;text-align:center"></div>
   </form>
 
   <section class="e-card" id="done" hidden>
     <h1 style="font:800 22px/1.1 var(--display);margin:0" id="doneTitle"></h1>
-    <p class="mute" style="margin:0">Partage-le : chaque trade te rapporte une part des frais.</p>
+    <p class="mute" style="margin:0">Share it: every trade earns you a cut of the fees.</p>
     <a class="btn wide" id="doneShare" target="_blank" rel="noopener"></a>
-    <a class="btn quiet wide" id="donePage" target="_blank" rel="noopener">Voir la page du token</a>
+    <a class="btn quiet wide" id="donePage" target="_blank" rel="noopener">View token page</a>
   </section>
 
   <section class="e-card" id="recentCard">
-    <div style="font-weight:700">Lancés à l'instant</div>
-    <div class="e-list" id="recent"><span class="mute">Chargement…</span></div>
+    <div style="font-weight:700">Just launched</div>
+    <div class="e-list" id="recent"><span class="mute">Loading…</span></div>
   </section>
 
-  <div class="e-foot">Tokens spéculatifs : ne mise que ce que tu peux perdre.</div>
+  <div class="e-foot">Speculative tokens: only put in what you can afford to lose.</div>
 </div>
 </body>
 </html>

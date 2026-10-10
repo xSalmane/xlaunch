@@ -1,4 +1,4 @@
-// XLaunch — code partagé par toutes les pages : session X, API, formats, posts, colonne de droite
+// XLaunch — code partagé par toutes les pages : session X, API, formats, posts, colonne de droite, effets
 (() => {
   const KEY = "xl_token";
   const store = {
@@ -22,10 +22,10 @@
     if (token) headers.Authorization = "Bearer " + token;
     let res;
     try { res = await fetch(path, { ...opts, headers }); }
-    catch { throw Object.assign(new Error("Connexion au serveur impossible. Vérifie ta connexion internet."), { status: 0 }); }
+    catch { throw Object.assign(new Error("Can't reach the server. Check your internet connection."), { status: 0 }); }
     const data = await res.json().catch(() => ({}));
     if (res.status === 401 && token && !data.reauth) { store.set(null); me = null; emit(); }
-    if (!res.ok) throw Object.assign(new Error(data.error || "Erreur " + res.status), { status: res.status, data });
+    if (!res.ok) throw Object.assign(new Error(data.error || "Error " + res.status), { status: res.status, data });
     return data;
   }
 
@@ -55,7 +55,7 @@
       const timer = setInterval(() => {
         if (w.closed) {
           clearInterval(timer);
-          setTimeout(() => { window.removeEventListener("message", onMsg); if (!me) reject(new Error("Connexion annulée.")); }, 400);
+          setTimeout(() => { window.removeEventListener("message", onMsg); if (!me) reject(new Error("Sign-in cancelled.")); }, 400);
         }
       }, 500);
     });
@@ -63,28 +63,28 @@
 
   function logout() { store.set(null); me = null; emit(); }
 
-  // ------------------------------------------------------------ formats
-  const nf = (d) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: d, minimumFractionDigits: 0 });
-  const compact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
+  // ------------------------------------------------------------ formats (anglais)
+  const nf = (d) => new Intl.NumberFormat("en-US", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
   function eth(v, digits = 3) {
     if (!v) return "0 ETH";
-    if (v < 0.001) return "< 0,001 ETH";
+    if (v < 0.001) return "< 0.001 ETH";
     return nf(v < 1 ? digits : 2).format(v) + " ETH";
   }
-  /** montants en dollars : 12,4 k$, 3,2 M$, 0,85 $ */
+  /** montants en dollars : $12.4K, $3.2M, $0.85 */
   function usd(v) {
-    if (!v) return "0 $";
-    if (v < 0.01) return "< 0,01 $";
-    if (v < 1000) return nf(v < 10 ? 2 : 0).format(v) + " $";
-    return compact.format(v).replace(/\s?k$/, " k").replace(/\s?M$/, " M").replace(/\s?Md$/, " Md") + "$";
+    if (!v) return "$0";
+    if (v < 0.01) return "<$0.01";
+    if (v < 1000) return "$" + nf(v < 10 ? 2 : 0).format(v);
+    return "$" + compact.format(v);
   }
-  /** quantité d'un actif : 1 234,5 USDC, 0,0042 ETH */
+  /** quantité d'un actif : 1,234.5 USDC, 0.0042 ETH */
   function amount(v, symbol) {
     const d = v >= 100 ? 0 : v >= 1 ? 2 : 4;
-    return (v && v < 0.0001 ? "< 0,0001" : nf(d).format(v)) + " " + symbol;
+    return (v && v < 0.0001 ? "< 0.0001" : nf(d).format(v)) + " " + symbol;
   }
   const count = (n) => (n >= 1000 ? compact.format(n) : String(n));
-  /** très petits prix : 0,0₈3412 (zéros comptés en indice) */
+  /** très petits prix : 0.0₈3412 (zéros comptés en indice) */
   function price(v) {
     if (!v) return "0";
     if (v >= 1) return nf(2).format(v);
@@ -92,26 +92,36 @@
     const [m, e] = v.toExponential(3).split("e");
     const zeros = -Number(e) - 1;
     const digits = m.replace(".", "").replace(/0+$/, "").slice(0, 4);
-    return `0,0${String(zeros).split("").map((c) => "₀₁₂₃₄₅₆₇₈₉"[c]).join("")}${digits}`;
+    return `0.0${String(zeros).split("").map((c) => "₀₁₂₃₄₅₆₇₈₉"[c]).join("")}${digits}`;
   }
   function pct(v) {
     if (!isFinite(v)) return "—";
     const p = v * 100;
-    const txt = (p > 0 ? "+" : "") + nf(Math.abs(p) >= 100 ? 0 : 1).format(p) + " %";
+    const txt = (p > 0 ? "+" : "") + nf(Math.abs(p) >= 100 ? 0 : 1).format(p) + "%";
     return `<span class="${p > 0.05 ? "up" : p < -0.05 ? "down" : "mute"}">${txt}</span>`;
   }
-  /** âge court, comme sur un fil social : 12 s, 5 min, 3 h, 2 j */
+  /** âge court, comme sur un fil social : 12s, 5m, 3h, 2d */
   function ago(ts) {
     const s = Math.max(1, Math.floor(Date.now() / 1000 - ts));
-    if (s < 60) return `${s} s`;
-    if (s < 3600) return `${Math.floor(s / 60)} min`;
-    if (s < 86400) return `${Math.floor(s / 3600)} h`;
-    if (s < 86400 * 7) return `${Math.floor(s / 86400)} j`;
-    return new Date(ts * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h`;
+    if (s < 86400 * 7) return `${Math.floor(s / 86400)}d`;
+    return new Date(ts * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
   const short = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
   const hue = (seed) => { let h = 0; for (const c of String(seed)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 195 + (h % 70); };
+
+  // ------------------------------------------------------------ chiffres qui bougent : flash vert / rouge
+  const prev = new Map();
+  /** renvoie la classe de flash si la valeur a changé depuis le dernier affichage */
+  function flash(key, value) {
+    const before = prev.get(key);
+    prev.set(key, value);
+    if (before === undefined || Math.abs(value - before) < Math.abs(before) * 1e-6) return "";
+    return value > before ? "flash-up" : "flash-down";
+  }
 
   // ------------------------------------------------------------ icônes (traits simples)
   const P = {
@@ -151,50 +161,94 @@
       ? `<img class="post-avatar" src="${esc(src)}" alt="" referrerpolicy="no-referrer" style="width:${size}px;height:${size}px" data-fallback="${esc((handle || "?")[0].toUpperCase())}">`
       : `<span class="post-avatar" style="width:${size}px;height:${size}px">${esc((handle || "?")[0].toUpperCase())}</span>`;
   }
-  /** mini-graphique du prix (svg) */
+  /** mini-graphique du prix (svg) avec une aire légère */
   function spark(points) {
     const pts = points && points.length > 1 ? points : [points?.[0] ?? 1, points?.[0] ?? 1];
     const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || hi || 1;
     const W = 100, H = 40;
-    const d = pts.map((p, i) => `${i ? "L" : "M"}${((i / (pts.length - 1)) * W).toFixed(2)},${(H - 3 - ((p - lo) / span) * (H - 6)).toFixed(2)}`).join("");
+    const xy = pts.map((p, i) => [((i / (pts.length - 1)) * W).toFixed(2), (H - 3 - ((p - lo) / span) * (H - 6)).toFixed(2)]);
+    const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x},${y}`).join("");
     const col = pts[pts.length - 1] >= pts[0] ? "var(--up)" : "var(--down)";
-    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="area" d="${d}L${W},${H}L0,${H}Z" fill="${col}"/>
+      <path d="${d}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
   }
   function tweetUrl(text, url) { return "https://x.com/intent/post?" + new URLSearchParams({ text, url }); }
 
   /** un lancement présenté comme un post du fil */
   function post(t, isNew = false) {
     const href = "/t/" + esc(t.token);
-    const share = tweetUrl(`$${t.symbol} sur Base, lancé depuis X`, t.share);
-    return `<article class="post${isNew ? " post-new" : ""}" data-href="${href}">
+    const share = tweetUrl(`$${t.symbol} on Base, launched from X`, t.share);
+    const f = flash("m:" + t.token, t.mcapUsd);
+    return `<article class="post${isNew ? " post-enter" : ""}" data-href="${href}">
       ${avatar(t.creatorAvatar, t.creator)}
       <div class="post-body">
-        <div class="post-head"><b>@${esc(t.creator)}</b><span class="mute">a lancé un token</span><span class="mute">· ${ago(t.createdAt)}</span></div>
+        <div class="post-head"><b>@${esc(t.creator)}</b><span class="mute">launched a token</span><span class="mute">· ${ago(t.createdAt)}</span></div>
         ${t.description ? `<p class="post-text">${esc(t.description)}</p>` : ""}
-        <a class="tcard" href="${href}">
+        <a class="tcard" href="${href}" style="--h:${hue(t.token)}">
           ${coin(t, 44)}
           <span class="tcard-name"><b>$${esc(t.symbol)}</b> ${pair(t.quote)}<span class="mute">${esc(t.name)}</span></span>
-          <span class="tcard-num"><b>${usd(t.mcapUsd)}</b>${pct(t.change24h)}</span>
+          <span class="tcard-num"><b class="num ${f}">${usd(t.mcapUsd)}</b>${pct(t.change24h)}</span>
           <span class="tcard-spark">${spark(t.spark)}</span>
         </a>
         <div class="post-actions">
           <a class="act" href="${href}" title="Trades">${icon("chart", "sm")}${count(t.trades)}</a>
-          <a class="act buy" href="${esc(t.trade)}" target="_blank" rel="noopener" title="Acheter avec ${esc(t.quote?.symbol)}">${icon("buy", "sm")}Acheter</a>
-          <a class="act" href="${share}" target="_blank" rel="noopener" title="Partager sur X">${icon("share", "sm")}Partager</a>
-          <span class="act" title="Frais gagnés par le créateur">${icon("coins", "sm")}${usd(t.creatorFeesUsd)}</span>
+          <a class="act buy" href="${esc(t.trade)}" target="_blank" rel="noopener" title="Buy with ${esc(t.quote?.symbol)}">${icon("buy", "sm")}Buy</a>
+          <a class="act" href="${share}" target="_blank" rel="noopener" title="Share on X">${icon("share", "sm")}Share</a>
+          <span class="act" title="Fees earned by the creator">${icon("coins", "sm")}${usd(t.creatorFeesUsd)}</span>
         </div>
       </div>
     </article>`;
   }
 
-  /** ligne compacte (explorer, mes tokens) */
+  /** ligne compacte (explorer) */
   function row(t, rank) {
+    const f = flash("r:" + t.token, t.mcapUsd);
     return `<a class="mini-row" href="/t/${esc(t.token)}">
       ${rank ? `<span class="mute" style="width:18px">${rank}</span>` : ""}
       ${coin(t, 40)}
       <span class="grow"><b>$${esc(t.symbol)}</b> ${pair(t.quote)}<br><span class="mute">${esc(t.name)} · @${esc(t.creator)}</span></span>
-      <span class="r"><b>${usd(t.mcapUsd)}</b><br>${pct(t.change24h)}</span>
+      <span class="r"><b class="num ${f}">${usd(t.mcapUsd)}</b><br>${pct(t.change24h)}</span>
     </a>`;
+  }
+
+  /** bande des derniers trades (accueil) */
+  async function tape(el) {
+    const draw = async () => {
+      try {
+        const rows = await api("/api/activity");
+        if (!rows.length) { el.innerHTML = `<span class="tape-empty">No trades yet. They'll scroll here live.</span>`; el.classList.remove("run"); return; }
+        const items = rows.map((r) => `<a class="tape-item ${r.side}" href="/t/${esc(r.token)}">
+          ${coin({ symbol: r.symbol, token: r.token, image: r.image }, 22)}
+          <span>${r.side === "buy" ? "bought" : "sold"} <b>$${esc(r.symbol)}</b></span>
+          <b class="v">${r.side === "buy" ? "+" : "−"}${usd(r.usd)}</b>
+          <span class="mute">${ago(r.ts)}</span></a>`).join("");
+        // contenu doublé pour une boucle sans couture
+        el.innerHTML = items + items;
+        el.style.setProperty("--tape-dur", Math.max(25, rows.length * 4) + "s");
+        el.classList.add("run");
+      } catch {}
+    };
+    await draw();
+    setInterval(() => { if (!document.hidden) draw(); }, 12000);
+  }
+
+  /** pluie de pièces, pour fêter un lancement */
+  function coinRain(t, n = 26) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const box = document.createElement("div");
+    box.className = "coin-rain";
+    for (let i = 0; i < n; i++) {
+      const s = 22 + Math.random() * 30;
+      box.insertAdjacentHTML("beforeend", coin(t, s));
+      const c = box.lastElementChild;
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.setProperty("--delay", (Math.random() * 0.7).toFixed(2) + "s");
+      c.style.setProperty("--d", (1.4 + Math.random() * 1.2).toFixed(2) + "s");
+      c.style.setProperty("--r", (Math.random() * 900 - 450).toFixed(0) + "deg");
+    }
+    document.body.append(box);
+    setTimeout(() => box.remove(), 3500);
   }
 
   function toast(msg, ms = 2600) {
@@ -203,15 +257,15 @@
     document.body.append(el);
     setTimeout(() => el.remove(), ms);
   }
-  async function copy(text, label = "Copié") {
-    try { await navigator.clipboard.writeText(text); toast(label); } catch { toast("Copie impossible, sélectionne le texte à la main."); }
+  async function copy(text, label = "Copied") {
+    try { await navigator.clipboard.writeText(text); toast(label); } catch { toast("Couldn't copy. Select the text by hand."); }
   }
 
-  /** « la moitié » / « 30 % » selon la part créateur configurée */
+  /** « half » / « 30% » selon la part créateur configurée */
   async function feeShare() {
     try {
       const c = await api("/api/config");
-      const label = c.creatorFeeBps === 5000 ? "la moitié" : nf(1).format(c.creatorFeeBps / 100) + " %";
+      const label = c.creatorFeeBps === 5000 ? "half" : nf(1).format(c.creatorFeeBps / 100) + "%";
       document.querySelectorAll("[data-fee-share]").forEach((el) => (el.textContent = label));
       return c;
     } catch { return null; }
@@ -220,15 +274,15 @@
   /** sélecteur de paire (ETH, USDC, actions tokenisées) ; renvoie une fonction qui donne l'actif choisi */
   async function pairPicker(el, onChange = () => {}) {
     let quotes = [];
-    try { quotes = await api("/api/quotes"); } catch { el.innerHTML = `<span class="mute">Paires indisponibles, ETH sera utilisé.</span>`; }
+    try { quotes = await api("/api/quotes"); } catch { el.innerHTML = `<span class="mute">Pairs unavailable, ETH will be used.</span>`; }
     const groups = [
       ["Crypto", quotes.filter((q) => q.kind !== "stock")],
-      ["Actions tokenisées", quotes.filter((q) => q.kind === "stock")],
+      ["Tokenized stocks", quotes.filter((q) => q.kind === "stock")],
     ].filter(([, list]) => list.length);
     el.innerHTML = groups.map(([label, list]) => `
       <div class="pair-group">${label}</div>
       <div class="pair-grid" role="radiogroup" aria-label="${label}">
-        ${list.map((q) => `<label class="pair-opt" title="${esc(q.name)}${q.paused ? " — suspendu par l'émetteur" : ""}">
+        ${list.map((q) => `<label class="pair-opt" title="${esc(q.name)}${q.paused ? " — paused by its issuer" : ""}">
           <input type="radio" name="quote" value="${esc(q.address)}" ${q.symbol === "ETH" ? "checked" : ""} ${q.paused ? "disabled" : ""}>
           <span>${q.icon ? `<img src="${esc(q.icon)}" alt="" referrerpolicy="no-referrer">` : ""}${esc(q.symbol)}</span>
         </label>`).join("")}
@@ -248,13 +302,13 @@
       if (me) {
         const av = me.avatar ? `<img src="${esc(me.avatar)}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar-ph"></span>`;
         slot.innerHTML = `<div class="who"><a href="/me" style="display:contents">${av}<span class="who-txt"><b>${esc(me.handle)}</b><span class="mute">@${esc(me.handle)}</span></span></a>
-          <button class="who-out" type="button" title="Se déconnecter" aria-label="Se déconnecter">${icon("logout", "sm")}</button></div>`;
+          <button class="who-out" type="button" title="Sign out" aria-label="Sign out">${icon("logout", "sm")}</button></div>`;
         slot.querySelector(".who-out").onclick = logout;
         slot.querySelector("img")?.addEventListener("error", (e) => {
           const ph = document.createElement("span"); ph.className = "avatar-ph"; e.target.replaceWith(ph);
         });
       } else {
-        slot.innerHTML = `<button class="btn ink wide" type="button" data-login>${X_SVG}<span class="lbl">Se connecter avec X</span></button>`;
+        slot.innerHTML = `<button class="btn ink wide" type="button" data-login>${X_SVG}<span class="lbl">Sign in with X</span></button>`;
         slot.querySelector("[data-login]").onclick = () => login().catch(() => {});
       }
     });
@@ -277,14 +331,14 @@
           ? top.map((t, i) => `<a class="trend" href="/t/${esc(t.token)}">
               <span class="rank">${i + 1}</span>${coin(t, 36)}
               <span class="trend-txt"><b>$${esc(t.symbol)}</b><span class="mute">${esc(t.quote?.symbol)} · @${esc(t.creator)}</span></span>
-              <span class="trend-num"><b>${usd(t.volume24hUsd)}</b><br>${pct(t.change24h)}</span></a>`).join("")
-          : `<div class="trend mute">Aucun token pour l'instant.</div>`;
+              <span class="trend-num"><b class="num ${flash("v:" + t.token, t.volume24hUsd)}">${usd(t.volume24hUsd)}</b><br>${pct(t.change24h)}</span></a>`).join("")
+          : `<div class="trend mute">No tokens yet.</div>`;
         const s = document.querySelector("[data-stats]");
-        if (s) s.innerHTML = `<div><b>${count(stats.launches)}</b><span class="mute">tokens lancés</span></div><div><b>${usd(stats.volume24hUsd)}</b><span class="mute">échangés en 24 h</span></div>`;
+        if (s) s.innerHTML = `<div><b>${count(stats.launches)}</b><span class="mute">tokens launched</span></div><div><b class="num ${flash("stats", stats.volume24hUsd)}">${usd(stats.volume24hUsd)}</b><span class="mute">traded in 24h</span></div>`;
       } catch {}
     };
     draw();
-    setInterval(() => { if (!document.hidden) draw(); }, 15000);
+    setInterval(() => { if (!document.hidden) draw(); }, 10000);
   }
 
   // bandeau visible tant que le site tourne sur le testnet
@@ -295,10 +349,10 @@
       const el = document.createElement("div");
       el.className = "testnet";
       el.textContent = document.body.hasAttribute("data-compact")
-        ? "Testnet Base Sepolia : les tokens n'ont aucune valeur."
+        ? "Base Sepolia testnet: tokens have no value."
         : c.devLogin
-          ? "Version de test sur Base Sepolia : les tokens n'ont aucune valeur et la connexion X est simulée."
-          : "Version de test sur Base Sepolia : les tokens n'ont aucune valeur.";
+          ? "Base Sepolia testnet: tokens have no value and sign-in with X is simulated."
+          : "Base Sepolia testnet: tokens have no value.";
       document.body.prepend(el);
       document.body.classList.add("has-banner");
     } catch {}
@@ -322,8 +376,8 @@
   window.XL = {
     api, login, logout, refreshMe, onAuth: (fn) => { listeners.add(fn); fn(me); }, get me() { return me; },
     isLogged: () => !!store.get(),
-    fmt: { eth, usd, amount, price, pct, ago, short, esc, count }, coin, pair, avatar, spark, post, row, icon,
-    toast, copy, tweetUrl, feeShare, pairPicker, X_SVG,
+    fmt: { eth, usd, amount, price, pct, ago, short, esc, count }, coin, pair, avatar, spark, post, row, icon, flash, hue,
+    tape, coinRain, toast, copy, tweetUrl, feeShare, pairPicker, X_SVG,
   };
 
   listeners.add(drawAuth);

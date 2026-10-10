@@ -120,3 +120,12 @@ export function uniswapLink(token: string, quote: string, quoteSymbol: string) {
   const input = quoteSymbol === "ETH" ? "ETH" : quote;
   return `https://app.uniswap.org/swap?chain=${chainParam}&inputCurrency=${input}&outputCurrency=${token}`;
 }
+
+/** derniers trades, tous tokens confondus (bande « live » du site) */
+export function activity(limit = 24) {
+  const rows = db.prepare(`SELECT s.tx_hash txHash, s.ts, s.trader, s.side, s.quote_amt quoteAmount, s.tokens,
+      l.token, l.symbol, l.image, l.quote, l.quote_symbol quoteSymbol
+    FROM swaps s JOIN launches l ON l.pool = s.pool
+    ORDER BY s.block DESC, s.log_index DESC LIMIT ?`).all(Math.min(limit, 50)) as { quoteAmount: number; quote: string }[];
+  return rows.map((r) => ({ ...r, usd: r.quoteAmount * quoteUsd(r.quote) }));
+}

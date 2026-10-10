@@ -26,8 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
       $("more").hidden = rows.length <= count;
       $("empty").hidden = !!shown.length;
       $("empty").innerHTML = q
-        ? `<b>Aucun résultat pour « ${XL.fmt.esc(q)} »</b>Essaie un autre nom, un $ticker, un @créateur ou une paire (USDC, tNVDA…).`
-        : `<b>Aucun token pour l'instant</b>Le premier, c'est peut-être le tien.<div style="margin-top:14px"><a class="btn" href="/#compose">Lancer un token</a></div>`;
+        ? `<b>No results for "${XL.fmt.esc(q)}"</b>Try another name, a $ticker, an @creator or a pair (USDC, tNVDA…).`
+        : `<b>No tokens yet</b>The first one could be yours.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch a token</a></div>`;
     } catch (e) {
       $("empty").hidden = false;
       $("empty").textContent = e.message;

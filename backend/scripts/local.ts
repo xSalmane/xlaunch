@@ -84,11 +84,11 @@ if (seed) {
   }
   const pick = (sym: string) => quotes.find((q) => q.symbol === sym) ?? quotes[0];
   const examples = [
-    { handle: "maelle_onchain", name: "Croissant", symbol: "CRSNT", quote: "ETH", description: "Le petit-déj officiel des degens parisiens." },
-    { handle: "basedtom", name: "Blue Hour", symbol: "BLUE", quote: "USDC", description: "Pour ceux qui tradent entre 5 h et 6 h du matin." },
-    { handle: "nina_builds", name: "Green Candle", symbol: "GCNDL", quote: "tNVDA", description: "Apparié à NVIDIA, évidemment." },
-    { handle: "lucas_eth", name: "Pétanque", symbol: "BOULE", quote: "tAAPL", description: "On tire ou on pointe ?" },
-    { handle: "sarah0x", name: "Rocket", symbol: "RKT", quote: "tTSLA", description: "" },
+    { handle: "maelle_onchain", name: "Croissant", symbol: "CRSNT", quote: "ETH", description: "The official breakfast of Paris degens." },
+    { handle: "basedtom", name: "Blue Hour", symbol: "BLUE", quote: "USDC", description: "For people who trade between 5 and 6 AM." },
+    { handle: "nina_builds", name: "Green Candle", symbol: "GCNDL", quote: "tNVDA", description: "Paired with NVIDIA, obviously." },
+    { handle: "lucas_eth", name: "Boules", symbol: "BOULE", quote: "tAAPL", description: "Shoot or point?" },
+    { handle: "sarah0x", name: "Rocket", symbol: "RKT", quote: "tTSLA", description: "To the moon, the long way round." },
   ];
   for (const e of examples) {
     const q = pick(e.quote);
