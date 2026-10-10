@@ -35,18 +35,28 @@
     </div>
 
     <div id="loggedIn" hidden>
-      <div class="banner" aria-hidden="true"></div>
-      <div class="profile">
-        <div class="profile-row"><span id="pAvatar"></span><a class="btn quiet small" style="margin-top:12px" id="pX" target="_blank" rel="noopener">X profile</a></div>
-        <h1 id="pName"></h1><div class="mute" id="pHandle"></div>
-        <div class="profile-stats"><span><b id="sEarned">—</b> earned</span><span><b id="sTokens">0</b> tokens launched</span></div>
+      <div class="ig-profile">
+        <span id="pAvatar"></span>
+        <div class="ig-profile-main">
+          <div class="ig-profile-top"><h1 id="pName"></h1><a class="btn quiet small" id="pX" target="_blank" rel="noopener">X profile</a></div>
+          <div class="ig-profile-stats">
+            <span><b id="sTokens">0</b> tokens</span>
+            <span><b id="sLikes">0</b> likes</span>
+            <span><b id="sEarned">—</b> earned</span>
+          </div>
+          <div class="mute" id="pHandle"></div>
+        </div>
       </div>
-      <div class="tabs" role="tablist" style="border-bottom:1px solid var(--line)">
-        <button type="button" role="tab" aria-selected="true" data-tab="gains"><span>Earnings</span></button>
-        <button type="button" role="tab" aria-selected="false" data-tab="tokens"><span>My tokens</span></button>
+      <div class="tabs ig-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="tokens"><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Tokens</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="gains"><span><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg> Earnings</span></button>
       </div>
+      <section id="tab-tokens">
+        <div id="mine" class="grid"></div>
+        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>
+      </section>
 
-      <section id="tab-gains" class="section" style="border-bottom:0">
+      <section id="tab-gains" class="section" style="border-bottom:0" hidden>
         <div class="mute">Total earned, estimated across every trade of your tokens</div>
         <div class="earned" id="earned">—</div>
         <div class="escrow-list" id="escrow" style="margin-top:12px"></div>
@@ -72,17 +82,13 @@
         </div>
       </section>
 
-      <section id="tab-tokens" hidden>
-        <div id="mine"></div>
-        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>
-      </section>
     </div>
   </main>
 
   <aside class="side-right" aria-label="Trending">
     <div class="side-right-inner">
       <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Search tokens, $tickers, @creators" aria-label="Search tokens"></form>
-      <section class="box"><h2>Trending</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Show more</a></section>
+      <section class="box"><h2>Trending <small class="mute">most liked today</small></h2><div data-trends></div><a class="box-more" href="/explore?sort=trending">Show more</a></section>
       <section class="box"><h2>By the numbers</h2><div class="stats-box" data-stats></div></section>
       <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us.</p>
     </div>

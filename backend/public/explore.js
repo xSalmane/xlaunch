@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
   const PAGE = 30;
   const params = new URLSearchParams(location.search);
-  let sort = ["new", "volume", "mcap"].includes(params.get("sort")) ? params.get("sort") : "new";
+  let sort = ["new", "trending", "mcap"].includes(params.get("sort")) ? params.get("sort") : params.get("sort") === "volume" ? "trending" : "new";
   let q = params.get("q") || "";
   let count = PAGE;
 
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const rows = await XL.api(`/api/tokens?sort=${sort}&limit=${count + 1}&q=${encodeURIComponent(q)}`);
       const shown = rows.slice(0, count);
-      $("list").innerHTML = shown.map((t, i) => XL.row(t, sort === "new" ? 0 : i + 1)).join("");
+      $("list").innerHTML = shown.map((t, i) => XL.tile(t, sort === "new" ? 0 : i + 1)).join("");
       $("more").hidden = rows.length <= count;
       $("empty").hidden = !!shown.length;
       $("empty").innerHTML = q

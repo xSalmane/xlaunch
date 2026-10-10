@@ -8,12 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("meLogin").innerHTML = `${XL.X_SVG} Sign in with X`;
   $("meLogin").onclick = () => XL.login().catch(() => {});
 
-  // onglets Gains / Mes tokens
+  // onglets Tokens / Earnings (un lien /me#earnings ouvre directement les gains)
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
     $("tab-gains").hidden = b.dataset.tab !== "gains";
     $("tab-tokens").hidden = b.dataset.tab !== "tokens";
   }));
+  if (location.hash === "#earnings") document.querySelector('[data-tab="gains"]').click();
 
   function msg(text, kind = "err") {
     const m = $("claimMsg");
@@ -26,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("earned").textContent = fmt.usd(c.earnedTotalUsd);
     $("sEarned").textContent = fmt.usd(c.earnedTotalUsd);
     $("sTokens").textContent = c.tokens.length;
+    $("sLikes").textContent = fmt.count(c.likesReceived ?? 0);
     $("pSub").textContent = `${c.tokens.length} token${c.tokens.length === 1 ? "" : "s"} launched`;
     const pending = c.escrow.filter((e) => e.amount !== "0");
     $("escrow").innerHTML = pending.map((e) => {
@@ -39,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Launch a token to start earning trading fees.";
     if (c.boundWallet && !$("recipient").value) $("recipient").value = c.boundWallet;
     $("claimForm").hidden = !c.tokens.length;
-    $("mine").innerHTML = c.tokens.map((t) => XL.post(t)).join("");
+    $("mine").innerHTML = c.tokens.map((t) => XL.tile(t)).join("");
     $("mineEmpty").hidden = !!c.tokens.length;
   }
 

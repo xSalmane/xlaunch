@@ -104,7 +104,13 @@ if (seed) {
     const t = seeded[i % seeded.length];
     await trade(t, i < seeded.length || Math.random() < 0.7, 50 + Math.random() * 900);
   }
-  console.log(`${seeded.length} tokens d'exemple et 35 trades créés`);
+  // des likes de démonstration (comptes fictifs) pour remplir Trending
+  const { likesRepo } = await import("../src/db.js");
+  seeded.forEach((t, i) => {
+    const n = [14, 3, 9, 6, 1][i] ?? 2;
+    for (let k = 0; k < n; k++) likesRepo.toggle(t.token, `demo-${k}`);
+  });
+  console.log(`${seeded.length} tokens d'exemple, 35 trades et des likes créés`);
 }
 
 await import("../src/server.js");

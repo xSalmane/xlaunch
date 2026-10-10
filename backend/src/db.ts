@@ -55,6 +55,16 @@ CREATE TABLE IF NOT EXISTS claims (
 );
 
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+
+-- un like par compte X et par token
+CREATE TABLE IF NOT EXISTS likes (
+  token      TEXT NOT NULL,           -- adresse en minuscules
+  x_id       TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (token, x_id)
+);
+CREATE INDEX IF NOT EXISTS likes_token_time ON likes(token, created_at);
+CREATE INDEX IF NOT EXISTS likes_user ON likes(x_id);
 `);
 
 // migrations douces (bases déjà créées par une version précédente)
@@ -132,6 +142,33 @@ export const launchesRepo = {
   pools(): { pool: string; launch_block: number; token_is0: number; quote_decimals: number }[] {
     return db.prepare(`SELECT pool, launch_block, token_is0, quote_decimals FROM launches WHERE status='done'`)
       .all() as { pool: string; launch_block: number; token_is0: number; quote_decimals: number }[];
+  },
+};
+
+export const likesRepo = {
+  /** ajoute ou retire le like ; renvoie le nouvel état et le total */
+  toggle(token: string, xId: string): { liked: boolean; likes: number } {
+    const t = token.toLowerCase();
+    const tx = db.transaction(() => {
+      const had = db.prepare(`SELECT 1 FROM likes WHERE token=? AND x_id=?`).get(t, xId);
+      if (had) db.prepare(`DELETE FROM likes WHERE token=? AND x_id=?`).run(t, xId);
+      else db.prepare(`INSERT INTO likes (token, x_id, created_at) VALUES (?,?,?)`).run(t, xId, now());
+      const { c } = db.prepare(`SELECT COUNT(*) c FROM likes WHERE token=?`).get(t) as { c: number };
+      return { liked: !had, likes: c };
+    });
+    return tx.immediate();
+  },
+  /** parmi ces tokens, ceux que ce compte a likés */
+  likedBy(xId: string, tokens: string[]): Set<string> {
+    if (!tokens.length) return new Set();
+    const rows = db
+      .prepare(`SELECT token FROM likes WHERE x_id=? AND token IN (${tokens.map(() => "?").join(",")})`)
+      .all(xId, ...tokens.map((t) => t.toLowerCase())) as { token: string }[];
+    return new Set(rows.map((r) => r.token));
+  },
+  /** total des likes reçus par les tokens d'un créateur */
+  receivedBy(xId: string): number {
+    return (db.prepare(`SELECT COUNT(*) c FROM likes k JOIN launches l ON lower(l.token)=k.token WHERE l.x_id=?`).get(xId) as { c: number }).c;
   },
 };
 

@@ -157,3 +157,15 @@ export function eligibility(s: Session): string | null {
   if (s.followers < config.minFollowers) return `You need at least ${config.minFollowers} followers on X to launch a token.`;
   return null;
 }
+
+/** session facultative : renseigne res.locals.session si le visiteur est connecté, sans rien bloquer */
+export async function softAuth(req: Request, res: Response, next: NextFunction) {
+  const h = req.header("authorization");
+  if (h?.startsWith("Bearer ")) {
+    try {
+      const { payload } = await jwtVerify(h.slice(7), config.jwtSecret, { algorithms: ["HS256"] });
+      res.locals.session = payload as unknown as Session;
+    } catch { /* visiteur anonyme */ }
+  }
+  next();
+}

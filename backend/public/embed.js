@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
       $("recent").innerHTML = rows.length
         ? rows.map((t) => `<a href="/t/${fmt.esc(t.token)}" target="_blank" rel="noopener">${XL.coin(t, 30)}
             <span><b>$${fmt.esc(t.symbol)}</b> ${XL.pair(t.quote)}<br><span class="mute">@${fmt.esc(t.creator)}</span></span>
-            <span class="r">${fmt.usd(t.mcapUsd)}<br>${fmt.pct(t.change24h)}</span></a>`).join("")
+            <span class="r">${fmt.usd(t.mcapUsd)}<br><span style="color:#ff2d55">♥ ${fmt.count(t.likes ?? 0)}</span></span></a>`).join("")
         : `<span class="mute">No tokens yet.</span>`;
     } catch {}
   }

@@ -4,8 +4,8 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { isAddress, getAddress, type Address } from "viem";
 import { config, blocklist, explorer } from "./config.js";
-import { authRouter, requireAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
-import { launchesRepo, claimsRepo } from "./db.js";
+import { authRouter, requireAuth, softAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
+import { launchesRepo, claimsRepo, likesRepo } from "./db.js";
 import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps } from "./chain.js";
 import { listTokens, getToken, trades, chart, globalStats, activity } from "./market.js";
 import { initQuotes, getQuotes, quoteOf, mintTestStocks } from "./quotes.js";
@@ -118,24 +118,34 @@ app.get("/api/quotes", (_req, res) => {
   })));
 });
 
-app.get("/api/tokens", async (req, res) => {
-  res.json(listTokens({
+/** coche « liked » sur les tokens que le visiteur connecté a likés */
+function markLiked<T extends { token: string | null; liked: boolean }>(views: T[], s?: Session): T[] {
+  if (!s) return views;
+  const set = likesRepo.likedBy(s.sub, views.map((v) => v.token!).filter(Boolean));
+  for (const v of views) v.liked = set.has(v.token!.toLowerCase());
+  return views;
+}
+
+app.get("/api/tokens", softAuth, async (req, res) => {
+  res.json(markLiked(listTokens({
     sort: String(req.query.sort ?? "new"),
     q: String(req.query.q ?? "").slice(0, 64),
     limit: Number(req.query.limit ?? 30),
     offset: Number(req.query.offset ?? 0),
     creatorFeeBps: await creatorFeeBps(),
-  }));
+  }), res.locals.session));
 });
 
 // compat embed
-app.get("/api/recent", async (_req, res) => {
-  res.json(listTokens({ sort: "new", limit: 20, creatorFeeBps: await creatorFeeBps() }));
+app.get("/api/recent", softAuth, async (_req, res) => {
+  res.json(markLiked(listTokens({ sort: "new", limit: 20, creatorFeeBps: await creatorFeeBps() }), res.locals.session));
 });
 
-app.get("/api/token/:token", async (req, res) => {
-  const t = isAddress(req.params.token) ? getToken(req.params.token, await creatorFeeBps()) : undefined;
+app.get("/api/token/:token", softAuth, async (req, res) => {
+  const addr = String(req.params.token);
+  const t = isAddress(addr) ? getToken(addr, await creatorFeeBps()) : undefined;
   if (!t) return res.status(404).json({ error: "No XLaunch token at this address." });
+  markLiked([t], res.locals.session);
   res.json({ ...t, explorer: `${explorer}/token/${t.token}` });
 });
 
@@ -244,13 +254,14 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
 
 app.get("/api/creator", requireAuth, async (_req, res) => {
   const s = res.locals.session as Session;
-  const mine = listTokens({ xId: s.sub, limit: 100, creatorFeeBps: await creatorFeeBps() });
+  const mine = markLiked(listTokens({ xId: s.sub, limit: 100, creatorFeeBps: await creatorFeeBps() }), s);
   const assets = creatorAssets(mine.map((t) => ({ token: t.token!, quote: t.quote.address })));
   const state = await creatorState(s.sub, assets);
   res.json({
     boundWallet: state.boundWallet,
     tokens: mine,
     earnedTotalUsd: mine.reduce((a, t) => a + t.creatorFeesUsd, 0),
+    likesReceived: likesRepo.receivedBy(s.sub),
     escrow: state.escrow.map((e) => {
       const q = quoteOf(e.asset);
       const t = mine.find((x) => x.token?.toLowerCase() === e.asset.toLowerCase());
@@ -286,6 +297,19 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
   } finally {
     claiming.delete(s.sub);
   }
+});
+
+// Like / unlike : un like par compte X et par token
+const likeRate = new Map<string, { n: number; t: number }>();
+app.post("/api/like", requireAuth, express.json({ limit: "1kb" }), (req, res) => {
+  const s = res.locals.session as Session;
+  const token = String(req.body?.token ?? "");
+  if (!isAddress(token) || !launchesRepo.byToken(token)) return res.status(404).json({ error: "No XLaunch token at this address." });
+  const r = likeRate.get(s.sub);
+  const nowMs = Date.now();
+  if (r && nowMs - r.t < 60_000 && r.n >= 60) return res.status(429).json({ error: "Slow down a little: too many likes in a minute." });
+  likeRate.set(s.sub, r && nowMs - r.t < 60_000 ? { n: r.n + 1, t: r.t } : { n: 1, t: nowMs });
+  res.json(likesRepo.toggle(token, s.sub));
 });
 
 /** tous les actifs où un créateur peut avoir des gains : ses tokens + les actifs de paire utilisés */

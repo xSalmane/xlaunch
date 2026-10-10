@@ -14,6 +14,7 @@ P = {
  "share": '<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
  "buy": '<path d="M4 7h16l-1.5 9.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
  "copy": '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+ "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
 }
 def i(name, cls=""):
     return f'<svg class="i {cls}" viewBox="0 0 24 24" aria-hidden="true">{P[name]}</svg>'
@@ -52,7 +53,7 @@ def page(script, content):
   <aside class="side-right" aria-label="Trending">
     <div class="side-right-inner">
       <form class="search" action="/explore" role="search">{i("search","sm")}<input name="q" placeholder="Search tokens, $tickers, @creators" aria-label="Search tokens"></form>
-      <section class="box"><h2>Trending</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Show more</a></section>
+      <section class="box"><h2>Trending <small class="mute">most liked today</small></h2><div data-trends></div><a class="box-more" href="/explore?sort=trending">Show more</a></section>
       <section class="box"><h2>By the numbers</h2><div class="stats-box" data-stats></div></section>
       <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us.</p>
     </div>
@@ -72,10 +73,9 @@ HOME = f'''    <div class="col-head">
       <div class="col-title"><h1>Home</h1><span class="live"><span class="live-dot"></span>Live</span></div>
       <div class="tabs" role="tablist">
         <button type="button" role="tab" aria-selected="true" data-feed="new"><span>Latest</span></button>
-        <button type="button" role="tab" aria-selected="false" data-feed="volume"><span>Trending</span></button>
+        <button type="button" role="tab" aria-selected="false" data-feed="trending"><span>Trending</span></button>
       </div>
     </div>
-    <div class="tape" aria-label="Live trades"><div class="tape-track" id="tape"></div></div>
 
     <form class="compose" id="compose" novalidate>
       <div class="coin" id="coin" style="--s:48px;--h:220" aria-hidden="true">$</div>
@@ -116,7 +116,7 @@ HOME = f'''    <div class="col-head">
       </div>
     </div>
 
-    <div id="feed" aria-live="polite"></div>
+    <div id="feed" class="ig-feed" aria-live="polite"></div>
     <div class="feed-empty" id="feedEmpty" hidden><b>No tokens yet</b>The first one could be yours.</div>
     <div class="more"><button class="btn quiet" type="button" id="more" hidden>Show more</button></div>'''
 
@@ -126,22 +126,21 @@ EXPLORE = f'''    <div class="col-head">
       </div>
       <div class="tabs" role="tablist">
         <button type="button" role="tab" aria-selected="true" data-sort="new"><span>New</span></button>
-        <button type="button" role="tab" aria-selected="false" data-sort="volume"><span>Trending</span></button>
+        <button type="button" role="tab" aria-selected="false" data-sort="trending"><span>Trending</span></button>
         <button type="button" role="tab" aria-selected="false" data-sort="mcap"><span>Market cap</span></button>
       </div>
     </div>
-    <div id="list"></div>
+    <div id="list" class="grid"></div>
     <div class="feed-empty" id="empty" hidden></div>
     <div class="more"><button class="btn quiet" type="button" id="more" hidden>Show more</button></div>'''
 
 TOKEN = f'''    <div class="col-head">
       <div class="col-title"><a class="back" href="/" aria-label="Back">{i("back")}</a><div><h1 id="hTitle">Token</h1><div class="sub" id="hSub"></div></div></div>
     </div>
-    <article class="detail">
-      <div class="detail-head"><span id="cAvatar"></span><div><b id="cName"></b><div class="mute" id="cHandle"></div></div></div>
-      <p class="detail-text" id="tDesc" hidden></p>
+    <div id="post" class="ig-feed"></div>
+    <section class="section">
+      <h2>Stats</h2>
       <div class="detail-card">
-        <div class="detail-top"><span id="tCoin"></span><div><h2 id="tTitle">Loading…</h2><div class="mute" id="tSub"></div></div></div>
         <dl class="kpis">
           <div class="kpi"><dt>Market cap</dt><dd id="kMcap">—</dd></div>
           <div class="kpi"><dt>Price</dt><dd id="kPrice">—</dd></div>
@@ -152,10 +151,9 @@ TOKEN = f'''    <div class="col-head">
       <div class="detail-meta" id="tMeta"></div>
       <div class="detail-actions">
         <a class="btn" id="tBuy" target="_blank" rel="noopener">{i("buy","sm")}<span>Buy</span></a>
-        <a class="btn quiet" id="tShare" target="_blank" rel="noopener">{i("share","sm")}Share</a>
         <button class="btn quiet" type="button" id="tCopy">{i("copy","sm")}Copy address</button>
       </div>
-    </article>
+    </section>
     <section class="section"><h2 id="chartTitle">Price</h2><div class="chart" id="chart" role="img" aria-label="Price chart"></div></section>
     <section class="section">
       <h2>About</h2>
@@ -183,18 +181,28 @@ ME = f'''    <div class="col-head">
     </div>
 
     <div id="loggedIn" hidden>
-      <div class="banner" aria-hidden="true"></div>
-      <div class="profile">
-        <div class="profile-row"><span id="pAvatar"></span><a class="btn quiet small" style="margin-top:12px" id="pX" target="_blank" rel="noopener">X profile</a></div>
-        <h1 id="pName"></h1><div class="mute" id="pHandle"></div>
-        <div class="profile-stats"><span><b id="sEarned">—</b> earned</span><span><b id="sTokens">0</b> tokens launched</span></div>
+      <div class="ig-profile">
+        <span id="pAvatar"></span>
+        <div class="ig-profile-main">
+          <div class="ig-profile-top"><h1 id="pName"></h1><a class="btn quiet small" id="pX" target="_blank" rel="noopener">X profile</a></div>
+          <div class="ig-profile-stats">
+            <span><b id="sTokens">0</b> tokens</span>
+            <span><b id="sLikes">0</b> likes</span>
+            <span><b id="sEarned">—</b> earned</span>
+          </div>
+          <div class="mute" id="pHandle"></div>
+        </div>
       </div>
-      <div class="tabs" role="tablist" style="border-bottom:1px solid var(--line)">
-        <button type="button" role="tab" aria-selected="true" data-tab="gains"><span>Earnings</span></button>
-        <button type="button" role="tab" aria-selected="false" data-tab="tokens"><span>My tokens</span></button>
+      <div class="tabs ig-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="tokens"><span>{i("grid","sm")} Tokens</span></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="gains"><span>{i("coins","sm")} Earnings</span></button>
       </div>
+      <section id="tab-tokens">
+        <div id="mine" class="grid"></div>
+        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>
+      </section>
 
-      <section id="tab-gains" class="section" style="border-bottom:0">
+      <section id="tab-gains" class="section" style="border-bottom:0" hidden>
         <div class="mute">Total earned, estimated across every trade of your tokens</div>
         <div class="earned" id="earned">—</div>
         <div class="escrow-list" id="escrow" style="margin-top:12px"></div>
@@ -220,10 +228,6 @@ ME = f'''    <div class="col-head">
         </div>
       </section>
 
-      <section id="tab-tokens" hidden>
-        <div id="mine"></div>
-        <div class="feed-empty" id="mineEmpty" hidden><b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/#compose">Launch my token</a></div></div>
-      </section>
     </div>'''
 
 NOTFOUND = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/" aria-label="Back">{i("back")}</a><h1>Not found</h1></div></div>

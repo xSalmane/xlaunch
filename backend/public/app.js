@@ -139,6 +139,8 @@
     buy: '<path d="M4 7h16l-1.5 9.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
     feather: '<path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/>',
+    heart: '<path d="M12 20.3s-7.4-4.5-9.3-9.1C1.3 7.8 3.5 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.5 0 5.7 3.3 4.3 6.7-1.9 4.6-9.3 9.1-9.3 9.1z"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   };
   const icon = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] ?? ""}</svg>`;
   const X_SVG = `<svg class="x-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
@@ -175,63 +177,144 @@
   }
   function tweetUrl(text, url) { return "https://x.com/intent/post?" + new URLSearchParams({ text, url }); }
 
-  /** un lancement présenté comme un post du fil */
+  // ------------------------------------------------------------ couvertures génératives (la touche spéciale)
+  // Chaque token sans logo reçoit une couverture unique, calculée à partir de son adresse :
+  // mêmes couleurs et même motif partout où il apparaît, jamais deux fois le même visuel.
+  function seedOf(str) { let h = 2166136261; for (const c of String(str).toLowerCase()) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  let artN = 0;
+  function art(t) {
+    const r = rng(seedOf(t.token || t.symbol));
+    const h1 = Math.floor(r() * 360), h2 = (h1 + 40 + Math.floor(r() * 140)) % 360;
+    const kind = Math.floor(r() * 4);
+    const ang = Math.floor(r() * 360);
+    const id = "a" + (++artN);
+    const W = "rgb(255 255 255 / ";
+    let pat = "";
+    if (kind === 0) { // anneaux
+      const cx = 20 + r() * 60, cy = 20 + r() * 60;
+      for (let i = 1; i <= 12; i++) pat += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(i * 9).toFixed(1)}" fill="none" stroke="${W}${(0.06 + r() * 0.16).toFixed(2)})" stroke-width="${(1 + r() * 3).toFixed(1)}"/>`;
+    } else if (kind === 1) { // rayons
+      const n = 18 + Math.floor(r() * 14);
+      for (let i = 0; i < n; i++) {
+        const a1 = (i / n) * Math.PI * 2, a2 = ((i + 0.5) / n) * Math.PI * 2;
+        if (i % 2) pat += `<path d="M50,50 L${(50 + 90 * Math.cos(a1)).toFixed(1)},${(50 + 90 * Math.sin(a1)).toFixed(1)} L${(50 + 90 * Math.cos(a2)).toFixed(1)},${(50 + 90 * Math.sin(a2)).toFixed(1)}Z" fill="${W}0.09)"/>`;
+      }
+    } else if (kind === 2) { // trame de points
+      for (let x = 5; x < 100; x += 10) for (let y = 5; y < 100; y += 10) pat += `<circle cx="${x}" cy="${y}" r="${(0.6 + r() * 2.6).toFixed(1)}" fill="${W}${(0.12 + r() * 0.25).toFixed(2)})"/>`;
+    } else { // vagues
+      for (let i = 0; i < 9; i++) {
+        const y = 8 + i * 11, a = 3 + r() * 6, f = 1 + r() * 2;
+        let d = `M0,${y}`;
+        for (let x = 0; x <= 100; x += 5) d += ` L${x},${(y + a * Math.sin((x / 100) * Math.PI * 2 * f + i)).toFixed(1)}`;
+        pat += `<path d="${d}" fill="none" stroke="${W}${(0.1 + r() * 0.18).toFixed(2)})" stroke-width="${(1.5 + r() * 2.5).toFixed(1)}"/>`;
+      }
+    }
+    const sym = "$" + String(t.symbol || "?").slice(0, 8);
+    const fs = Math.min(13, 62 / sym.length);
+    return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="${id}" gradientTransform="rotate(${ang} .5 .5)"><stop offset="0" stop-color="hsl(${h1} 78% 56%)"/><stop offset="1" stop-color="hsl(${h2} 82% 42%)"/></linearGradient></defs>
+      <rect width="100" height="100" fill="url(#${id})"/>${pat}
+      <circle cx="50" cy="50" r="27" fill="hsl(${h1} 85% 52%)" stroke="${W}0.95)" stroke-width="2.4"/>
+      <circle cx="50" cy="50" r="22.5" fill="none" stroke="${W}0.45)" stroke-width="1.2"/>
+      <text x="50" y="50" dy="0.35em" text-anchor="middle" font-family="Instrument Sans, system-ui, sans-serif" font-weight="800" font-size="${fs.toFixed(1)}" fill="#fff">${esc(sym)}</text>
+    </svg>`;
+  }
+  const media = (t) => (t.image ? `<img src="${esc(t.image)}" alt="" loading="lazy">` : art(t));
+  const likesText = (n) => (n === 1 ? "1 like" : `${count(n)} likes`);
+  const HEART_SOLID = `<svg viewBox="0 0 24 24" aria-hidden="true">${P.heart}</svg>`;
+
+  /** un lancement présenté comme un post Instagram */
   function post(t, isNew = false) {
     const href = "/t/" + esc(t.token);
     const share = tweetUrl(`$${t.symbol} on Base, launched from X`, t.share);
     const f = flash("m:" + t.token, t.mcapUsd);
-    return `<article class="post${isNew ? " post-enter" : ""}" data-href="${href}">
-      ${avatar(t.creatorAvatar, t.creator)}
-      <div class="post-body">
-        <div class="post-head"><b>@${esc(t.creator)}</b><span class="mute">launched a token</span><span class="mute">· ${ago(t.createdAt)}</span></div>
-        ${t.description ? `<p class="post-text">${esc(t.description)}</p>` : ""}
-        <a class="tcard" href="${href}" style="--h:${hue(t.token)}">
-          ${coin(t, 44)}
-          <span class="tcard-name"><b>$${esc(t.symbol)}</b> ${pair(t.quote)}<span class="mute">${esc(t.name)}</span></span>
-          <span class="tcard-num"><b class="num ${f}">${usd(t.mcapUsd)}</b>${pct(t.change24h)}</span>
-          <span class="tcard-spark">${spark(t.spark)}</span>
-        </a>
-        <div class="post-actions">
-          <a class="act" href="${href}" title="Trades">${icon("chart", "sm")}${count(t.trades)}</a>
-          <a class="act buy" href="${esc(t.trade)}" target="_blank" rel="noopener" title="Buy with ${esc(t.quote?.symbol)}">${icon("buy", "sm")}Buy</a>
-          <a class="act" href="${share}" target="_blank" rel="noopener" title="Share on X">${icon("share", "sm")}Share</a>
-          <span class="act" title="Fees earned by the creator">${icon("coins", "sm")}${usd(t.creatorFeesUsd)}</span>
-        </div>
+    return `<article class="ig${isNew ? " post-enter" : ""}" data-token="${esc(t.token)}">
+      <header class="ig-head">
+        ${avatar(t.creatorAvatar, t.creator, 34)}
+        <div class="who-line"><b>@${esc(t.creator)}</b> <span class="mute">· ${ago(t.createdAt)}</span><br>
+          <span class="mute">launched $${esc(t.symbol)}, paired with</span> ${pair(t.quote)}</div>
+        ${t.hot ? `<span class="hot" title="3+ likes in the last hour">🔥 Hot</span>` : ""}
+      </header>
+      <div class="ig-media" data-like-media title="Double-tap to like">
+        ${media(t)}
+        <span class="ig-pill"><span class="num ${f}">${usd(t.mcapUsd)}</span>${pct(t.change24h)}</span>
+        <span class="ig-burst">${HEART_SOLID}</span>
       </div>
+      <div class="ig-actions">
+        <button class="ig-btn like${t.liked ? " on" : ""}" type="button" data-like aria-pressed="${t.liked ? "true" : "false"}" aria-label="Like">${icon("heart")}</button>
+        <a class="ig-btn" href="${href}" aria-label="Chart and trades">${icon("chart")}</a>
+        <a class="ig-btn" href="${share}" target="_blank" rel="noopener" aria-label="Share on X">${icon("share")}</a>
+        <span class="grow"></span>
+        <a class="btn small" href="${esc(t.trade)}" target="_blank" rel="noopener">${icon("buy", "sm")}Buy with ${esc(t.quote?.symbol ?? "ETH")}</a>
+      </div>
+      <div class="ig-likes" data-likes data-n="${t.likes}">${likesText(t.likes)}</div>
+      <div class="ig-stats"><b>$${esc(t.symbol)}</b> ${esc(t.name)} <span class="mute">· ${count(t.trades)} trades · ${usd(t.creatorFeesUsd)} earned by the creator</span></div>
+      ${t.description ? `<p class="ig-caption"><b>@${esc(t.creator)}</b> ${esc(t.description)}</p>` : ""}
+      <a class="ig-more" href="${href}">View chart and ${t.trades === 1 ? "1 trade" : count(t.trades) + " trades"}</a>
     </article>`;
   }
 
-  /** ligne compacte (explorer) */
-  function row(t, rank) {
-    const f = flash("r:" + t.token, t.mcapUsd);
-    return `<a class="mini-row" href="/t/${esc(t.token)}">
-      ${rank ? `<span class="mute" style="width:18px">${rank}</span>` : ""}
-      ${coin(t, 40)}
-      <span class="grow"><b>$${esc(t.symbol)}</b> ${pair(t.quote)}<br><span class="mute">${esc(t.name)} · @${esc(t.creator)}</span></span>
-      <span class="r"><b class="num ${f}">${usd(t.mcapUsd)}</b><br>${pct(t.change24h)}</span>
+  /** tuile carrée (grille de l'explorer et du profil) */
+  function tile(t, rank = 0) {
+    return `<a class="tile" href="/t/${esc(t.token)}" aria-label="$${esc(t.symbol)}, ${likesText(t.likes)}">
+      ${media(t)}
+      ${t.hot ? `<span class="hot">🔥</span>` : ""}
+      ${rank ? `<span class="tile-rank">#${rank}</span>` : ""}
+      <span class="tile-cap"><span>$${esc(t.symbol)}</span><span>♥ ${count(t.likes)}</span></span>
+      <span class="tile-over"><span>♥ ${likesText(t.likes)}</span><span>${usd(t.mcapUsd)} ${pct(t.change24h).replace(/class="(up|down|mute)"/, 'style="color:#fff"')}</span></span>
     </a>`;
   }
 
-  /** bande des derniers trades (accueil) */
-  async function tape(el) {
-    const draw = async () => {
-      try {
-        const rows = await api("/api/activity");
-        if (!rows.length) { el.innerHTML = `<span class="tape-empty">No trades yet. They'll scroll here live.</span>`; el.classList.remove("run"); return; }
-        const items = rows.map((r) => `<a class="tape-item ${r.side}" href="/t/${esc(r.token)}">
-          ${coin({ symbol: r.symbol, token: r.token, image: r.image }, 22)}
-          <span>${r.side === "buy" ? "bought" : "sold"} <b>$${esc(r.symbol)}</b></span>
-          <b class="v">${r.side === "buy" ? "+" : "−"}${usd(r.usd)}</b>
-          <span class="mute">${ago(r.ts)}</span></a>`).join("");
-        // contenu doublé pour une boucle sans couture
-        el.innerHTML = items + items;
-        el.style.setProperty("--tape-dur", Math.max(25, rows.length * 4) + "s");
-        el.classList.add("run");
-      } catch {}
+  // ------------------------------------------------------------ likes : bouton cœur et double-tap sur le visuel
+  async function toggleLike(card, burst = false) {
+    if (!card) return;
+    if (!me) { try { await login(); } catch { return; } }
+    const btn = card.querySelector("[data-like]");
+    const box = card.querySelector("[data-likes]");
+    const wasOn = btn.classList.contains("on");
+    if (burst && wasOn) return; // le double-tap ne retire jamais un like
+    const set = (on, n) => {
+      card.ownerDocument.querySelectorAll(`[data-token="${card.dataset.token}"]`).forEach((c) => {
+        const b = c.querySelector("[data-like]"), l = c.querySelector("[data-likes]");
+        b?.classList.toggle("on", on); b?.setAttribute("aria-pressed", String(on));
+        if (l) { l.dataset.n = n; l.textContent = likesText(n); }
+      });
     };
-    await draw();
-    setInterval(() => { if (!document.hidden) draw(); }, 12000);
+    const n0 = Number(box?.dataset.n ?? 0);
+    set(!wasOn, Math.max(0, n0 + (wasOn ? -1 : 1)));
+    btn.classList.remove("pop"); void btn.offsetWidth; btn.classList.add("pop");
+    try {
+      const r = await api("/api/like", { method: "POST", body: JSON.stringify({ token: card.dataset.token }) });
+      set(r.liked, r.likes);
+    } catch (e) { set(wasOn, n0); toast(e.message); }
   }
+  function burstAt(mediaEl) {
+    const b = mediaEl.querySelector(".ig-burst");
+    if (!b) return;
+    b.classList.remove("go"); void b.offsetWidth; b.classList.add("go");
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-like]");
+    if (b) { e.preventDefault(); toggleLike(b.closest("[data-token]")); }
+  });
+  document.addEventListener("dblclick", (e) => {
+    const m = e.target.closest("[data-like-media]");
+    if (m) { e.preventDefault(); burstAt(m); toggleLike(m.closest("[data-token]"), true); }
+  });
+  // double-tap au doigt (certains navigateurs mobiles n'émettent pas dblclick)
+  let lastTap = { t: 0, el: null };
+  document.addEventListener("pointerup", (e) => {
+    if (e.pointerType !== "touch") return;
+    const m = e.target.closest("[data-like-media]");
+    if (!m) return;
+    const now = Date.now();
+    if (lastTap.el === m && now - lastTap.t < 320) { burstAt(m); toggleLike(m.closest("[data-token]"), true); lastTap = { t: 0, el: null }; }
+    else lastTap = { t: now, el: m };
+  });
 
   /** pluie de pièces, pour fêter un lancement */
   function coinRain(t, n = 26) {
@@ -326,12 +409,12 @@
     if (!box) return;
     const draw = async () => {
       try {
-        const [top, stats] = await Promise.all([api("/api/tokens?sort=volume&limit=5"), api("/api/stats")]);
+        const [top, stats] = await Promise.all([api("/api/tokens?sort=trending&limit=5"), api("/api/stats")]);
         box.innerHTML = top.length
           ? top.map((t, i) => `<a class="trend" href="/t/${esc(t.token)}">
               <span class="rank">${i + 1}</span>${coin(t, 36)}
               <span class="trend-txt"><b>$${esc(t.symbol)}</b><span class="mute">${esc(t.quote?.symbol)} · @${esc(t.creator)}</span></span>
-              <span class="trend-num"><b class="num ${flash("v:" + t.token, t.volume24hUsd)}">${usd(t.volume24hUsd)}</b><br>${pct(t.change24h)}</span></a>`).join("")
+              <span class="trend-num"><b class="heart num ${flash("l:" + t.token, t.likes24h)}">♥ ${count(t.likes24h)}</b><br><span class="mute">${usd(t.mcapUsd)}</span></span></a>`).join("")
           : `<div class="trend mute">No tokens yet.</div>`;
         const s = document.querySelector("[data-stats]");
         if (s) s.innerHTML = `<div><b>${count(stats.launches)}</b><span class="mute">tokens launched</span></div><div><b class="num ${flash("stats", stats.volume24hUsd)}">${usd(stats.volume24hUsd)}</b><span class="mute">traded in 24h</span></div>`;
@@ -376,8 +459,8 @@
   window.XL = {
     api, login, logout, refreshMe, onAuth: (fn) => { listeners.add(fn); fn(me); }, get me() { return me; },
     isLogged: () => !!store.get(),
-    fmt: { eth, usd, amount, price, pct, ago, short, esc, count }, coin, pair, avatar, spark, post, row, icon, flash, hue,
-    tape, coinRain, toast, copy, tweetUrl, feeShare, pairPicker, X_SVG,
+    fmt: { eth, usd, amount, price, pct, ago, short, esc, count }, coin, pair, avatar, spark, post, tile, art, icon, flash, hue,
+    toggleLike, likesText, coinRain, toast, copy, tweetUrl, feeShare, pairPicker, X_SVG,
   };
 
   listeners.add(drawAuth);

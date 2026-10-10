@@ -13,8 +13,11 @@ const POOL_FEE = 0.01;
 
 type Row = LaunchRow & {
   last_price: number | null; price_24h: number | null; vol24: number; vol_total: number;
-  trades: number; buys24: number; sells24: number;
+  trades: number; buys24: number; sells24: number; likes: number; likes24: number; likes1h: number;
 };
+
+/** « Hot » : au moins 3 likes dans la dernière heure */
+const HOT_LIKES_1H = 3;
 
 const SELECT = `
 SELECT l.*,
@@ -24,7 +27,10 @@ SELECT l.*,
   (SELECT COALESCE(SUM(quote_amt),0) FROM swaps s WHERE s.pool=l.pool) AS vol_total,
   (SELECT COUNT(*) FROM swaps s WHERE s.pool=l.pool) AS trades,
   (SELECT COUNT(*) FROM swaps s WHERE s.pool=l.pool AND s.ts>@t24 AND side='buy') AS buys24,
-  (SELECT COUNT(*) FROM swaps s WHERE s.pool=l.pool AND s.ts>@t24 AND side='sell') AS sells24
+  (SELECT COUNT(*) FROM swaps s WHERE s.pool=l.pool AND s.ts>@t24 AND side='sell') AS sells24,
+  (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token)) AS likes,
+  (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token) AND k.created_at>@t24) AS likes24,
+  (SELECT COUNT(*) FROM likes k WHERE k.token=lower(l.token) AND k.created_at>@t1) AS likes1h
 FROM launches l WHERE l.status='done'`;
 
 export type TokenView = ReturnType<typeof serialize>;
@@ -49,6 +55,7 @@ export function serialize(r: Row, creatorFeeBps: number) {
     creatorFeesUsd: ((feesQuote * creatorFeeBps) / 10_000) * usd,
     change24h: ref ? price / ref - 1 : 0,
     trades: r.trades, buys24h: r.buys24, sells24h: r.sells24,
+    likes: r.likes, likes24h: r.likes24, hot: r.likes1h >= HOT_LIKES_1H, liked: false,
     trade: uniswapLink(r.token!, r.quote, r.quote_symbol),
     share: `${config.publicUrl}/t/${r.token}`,
   };
@@ -60,11 +67,13 @@ export function listTokens(o: { sort?: string; q?: string; limit?: number; offse
   if (q) where.push(`(l.name LIKE @like OR l.symbol LIKE @like OR l.handle LIKE @like OR l.quote_symbol LIKE @like OR lower(l.token)=lower(@q))`);
   if (o.xId) where.push(`l.x_id=@xId`);
   const rows = db.prepare(`${SELECT}${where.length ? " AND " + where.join(" AND ") : ""} ORDER BY l.id DESC LIMIT 2000`).all({
-    t24: now() - 86400, like: `%${q}%`, q, xId: o.xId ?? "",
+    t24: now() - 86400, t1: now() - 3600, like: `%${q}%`, q, xId: o.xId ?? "",
   }) as Row[];
   const views = rows.map((r) => serialize(r, o.creatorFeeBps));
   // tri en dollars : seul moyen de comparer des paires différentes
-  if (o.sort === "mcap") views.sort((a, b) => b.mcapUsd - a.mcapUsd);
+  // Trending = les plus likés sur 24 h, puis au total, puis le volume
+  if (o.sort === "trending") views.sort((a, b) => b.likes24h - a.likes24h || b.likes - a.likes || b.volume24hUsd - a.volume24hUsd || b.createdAt - a.createdAt);
+  else if (o.sort === "mcap") views.sort((a, b) => b.mcapUsd - a.mcapUsd);
   else if (o.sort === "volume") views.sort((a, b) => b.volume24hUsd - a.volume24hUsd || b.createdAt - a.createdAt);
   const offset = Math.max(o.offset ?? 0, 0);
   const limit = Math.min(Math.max(o.limit ?? 30, 1), 100);
@@ -81,7 +90,7 @@ function withSpark<T extends { pool: string | null; price: number }>(views: T[])
 }
 
 export function getToken(token: string, creatorFeeBps: number) {
-  const r = db.prepare(`${SELECT} AND lower(l.token)=lower(@token)`).get({ t24: now() - 86400, token }) as Row | undefined;
+  const r = db.prepare(`${SELECT} AND lower(l.token)=lower(@token)`).get({ t24: now() - 86400, t1: now() - 3600, token }) as Row | undefined;
   return r ? serialize(r, creatorFeeBps) : undefined;
 }
 

@@ -135,9 +135,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (location.hash === "#compose") setTimeout(() => $("name").focus(), 50);
   window.addEventListener("hashchange", () => { if (location.hash === "#compose") $("name").focus(); });
 
-  // ------------------------------------------------------------ bande des trades en direct
-  XL.tape($("tape"));
-
   // ------------------------------------------------------------ fil
   const PAGE = 20;
   let sort = "new";

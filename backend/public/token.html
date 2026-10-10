@@ -28,11 +28,10 @@
     <div class="col-head">
       <div class="col-title"><a class="back" href="/" aria-label="Back"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg></a><div><h1 id="hTitle">Token</h1><div class="sub" id="hSub"></div></div></div>
     </div>
-    <article class="detail">
-      <div class="detail-head"><span id="cAvatar"></span><div><b id="cName"></b><div class="mute" id="cHandle"></div></div></div>
-      <p class="detail-text" id="tDesc" hidden></p>
+    <div id="post" class="ig-feed"></div>
+    <section class="section">
+      <h2>Stats</h2>
       <div class="detail-card">
-        <div class="detail-top"><span id="tCoin"></span><div><h2 id="tTitle">Loading…</h2><div class="mute" id="tSub"></div></div></div>
         <dl class="kpis">
           <div class="kpi"><dt>Market cap</dt><dd id="kMcap">—</dd></div>
           <div class="kpi"><dt>Price</dt><dd id="kPrice">—</dd></div>
@@ -43,10 +42,9 @@
       <div class="detail-meta" id="tMeta"></div>
       <div class="detail-actions">
         <a class="btn" id="tBuy" target="_blank" rel="noopener"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16l-1.5 9.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><span>Buy</span></a>
-        <a class="btn quiet" id="tShare" target="_blank" rel="noopener"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Share</a>
         <button class="btn quiet" type="button" id="tCopy"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy address</button>
       </div>
-    </article>
+    </section>
     <section class="section"><h2 id="chartTitle">Price</h2><div class="chart" id="chart" role="img" aria-label="Price chart"></div></section>
     <section class="section">
       <h2>About</h2>
@@ -68,7 +66,7 @@
   <aside class="side-right" aria-label="Trending">
     <div class="side-right-inner">
       <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Search tokens, $tickers, @creators" aria-label="Search tokens"></form>
-      <section class="box"><h2>Trending</h2><div data-trends></div><a class="box-more" href="/explore?sort=volume">Show more</a></section>
+      <section class="box"><h2>Trending <small class="mute">most liked today</small></h2><div data-trends></div><a class="box-more" href="/explore?sort=trending">Show more</a></section>
       <section class="box"><h2>By the numbers</h2><div class="stats-box" data-stats></div></section>
       <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us.</p>
     </div>

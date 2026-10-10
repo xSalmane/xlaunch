@@ -14,16 +14,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       first = false;
       document.title = `$${t.symbol} — ${t.name}`;
       $("hTitle").textContent = `$${t.symbol}`;
-      $("cAvatar").innerHTML = XL.avatar(t.creatorAvatar, t.creator, 48);
-      $("cName").textContent = t.creator;
-      $("cHandle").textContent = `@${t.creator}`;
-      if (t.description) { $("tDesc").textContent = t.description; $("tDesc").hidden = false; }
-      $("tCoin").innerHTML = XL.coin(t, 64);
-      $("tTitle").textContent = `$${t.symbol}`;
-      $("tSub").innerHTML = `${fmt.esc(t.name)} ${XL.pair(t.quote)}`;
+      $("post").innerHTML = XL.post(t);
       $("tBuy").href = t.trade;
       $("tBuy").querySelector("span").textContent = `Buy with ${t.quote.symbol}`;
-      $("tShare").href = XL.tweetUrl(`$${t.symbol} on Base, launched from X`, t.share);
       $("tCopy").onclick = () => XL.copy(t.token, "Address copied");
       document.querySelector(".detail-card").style.setProperty("--h", XL.hue(t.token));
       $("fPair").innerHTML = XL.pair(t.quote);
@@ -33,6 +26,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("fPool").href = `${cfg.explorer}/address/${t.pool}`;
       const d = new Date(t.createdAt * 1000);
       $("tMeta").dataset.when = `${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    } else {
+      // le post reste en place (pas de saut pendant un like) : on met juste à jour ses chiffres
+      const card = $("post").querySelector("[data-token]");
+      const likes = card?.querySelector("[data-likes]");
+      if (likes && Number(likes.dataset.n) !== t.likes) { likes.dataset.n = t.likes; likes.textContent = XL.likesText(t.likes); }
+      const pill = card?.querySelector(".ig-pill");
+      if (pill) pill.innerHTML = `<span class="num ${XL.flash("m:" + t.token, t.mcapUsd)}">${fmt.usd(t.mcapUsd)}</span>${fmt.pct(t.change24h)}`;
     }
     const fl = (el, key, v) => { el.className = "num " + XL.flash(key, v); };
     $("kMcap").textContent = fmt.usd(t.mcapUsd); fl($("kMcap"), "k:m", t.mcapUsd);
