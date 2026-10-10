@@ -41,20 +41,16 @@
         <div><dt>Gas you pay</dt><dd>$0</dd></div>
       </dl>
     </div>
-    <figure class="l-mint" id="mint">
-      <div class="m-stage" id="stage" aria-hidden="true">
-        <div class="m-coin" id="coin3d">
-          <div class="m-face m-front" id="faceA"></div>
-          <div class="m-face m-back" id="faceB"></div>
-        </div>
-        <div class="m-shadow" id="coinShadow"></div>
+    <figure class="l-pool">
+      <div class="p-wrap" id="poolWrap">
+        <canvas id="pool" aria-hidden="true"></canvas>
+        <div class="p-tip" id="poolTip" hidden></div>
       </div>
-      <figcaption class="m-cap" aria-live="polite">
-        <button class="m-nav" type="button" id="prevCoin" aria-label="Previous token"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
-        <a class="m-info" id="coinInfo" href="/app#compose"></a>
-        <button class="m-nav" type="button" id="nextCoin" aria-label="Next token"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      <figcaption class="p-cap" aria-live="polite">
+        <a class="p-info" id="poolInfo" href="/app#compose"></a>
+        <span class="p-hint">Every token launched from X floats here, with 100% of its supply in the pool. Stir the water.</span>
       </figcaption>
-      <p class="m-hint">Every token launched from X, minted as a coin. Drag to flip.</p>
+      <nav class="sr" id="poolLinks" aria-label="Tokens in the pool"></nav>
     </figure>
   </section>
 
