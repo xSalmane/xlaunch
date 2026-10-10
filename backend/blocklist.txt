@@ -1,0 +1,10 @@
+# un terme par ligne (minuscules) — refusé s'il apparaît dans le nom ou le ticker
+# marques / noms officiels souvent usurpés
+coinbase
+binance
+base official
+uniswap
+tether
+usdc
+usdt
+weth

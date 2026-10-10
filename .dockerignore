@@ -1,0 +1,8 @@
+**/node_modules
+**/*.db
+**/*.db-*
+**/uploads
+**/uploads-local
+**/.env
+backend/data
+.git

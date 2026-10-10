@@ -1,0 +1,129 @@
+import Database from "better-sqlite3";
+import { config } from "./config.js";
+
+export const db = new Database(config.dbPath);
+db.pragma("journal_mode = WAL");
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS launches (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  x_id         TEXT NOT NULL,
+  handle       TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  symbol       TEXT NOT NULL,
+  image        TEXT NOT NULL DEFAULT '',
+  description  TEXT NOT NULL DEFAULT '',
+  status       TEXT NOT NULL DEFAULT 'pending', -- pending | done | failed
+  token        TEXT,
+  pool         TEXT,
+  tx_hash      TEXT,
+  launch_block INTEGER,
+  init_price   REAL,                            -- prix de départ en ETH par token
+  error        TEXT,
+  created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS launches_user ON launches(x_id, created_at);
+CREATE INDEX IF NOT EXISTS launches_time ON launches(created_at);
+CREATE INDEX IF NOT EXISTS launches_token ON launches(token);
+
+CREATE TABLE IF NOT EXISTS swaps (
+  pool       TEXT NOT NULL,
+  tx_hash    TEXT NOT NULL,
+  log_index  INTEGER NOT NULL,
+  block      INTEGER NOT NULL,
+  ts         INTEGER NOT NULL,
+  trader     TEXT NOT NULL,
+  side       TEXT NOT NULL,      -- buy | sell
+  eth        REAL NOT NULL,      -- montant ETH échangé
+  tokens     REAL NOT NULL,      -- montant de tokens échangé
+  price      REAL NOT NULL,      -- ETH par token après le swap
+  PRIMARY KEY (tx_hash, log_index)
+);
+CREATE INDEX IF NOT EXISTS swaps_pool_ts ON swaps(pool, ts);
+CREATE INDEX IF NOT EXISTS swaps_ts ON swaps(ts);
+
+CREATE TABLE IF NOT EXISTS claims (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  x_id       TEXT NOT NULL,
+  recipient  TEXT NOT NULL,
+  tx_hash    TEXT,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+`);
+
+export const now = () => Math.floor(Date.now() / 1000);
+
+export type LaunchRow = {
+  id: number; x_id: string; handle: string; name: string; symbol: string; image: string; description: string;
+  status: string; token: string | null; pool: string | null; tx_hash: string | null; launch_block: number | null;
+  init_price: number | null; error: string | null; created_at: number;
+};
+
+export const kv = {
+  get(k: string): string | undefined {
+    return (db.prepare(`SELECT v FROM kv WHERE k=?`).get(k) as { v: string } | undefined)?.v;
+  },
+  set(k: string, v: string) {
+    db.prepare(`INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run(k, v);
+  },
+};
+
+export const launchesRepo = {
+  countUserLast24h(xId: string): number {
+    return (db
+      .prepare(`SELECT COUNT(*) c FROM launches WHERE x_id=? AND status!='failed' AND created_at>?`)
+      .get(xId, now() - 86400) as { c: number }).c;
+  },
+  countGlobalLastHour(): number {
+    return (db
+      .prepare(`SELECT COUNT(*) c FROM launches WHERE status!='failed' AND created_at>?`)
+      .get(now() - 3600) as { c: number }).c;
+  },
+  symbolTaken(symbol: string): boolean {
+    return !!db.prepare(`SELECT 1 FROM launches WHERE upper(symbol)=upper(?) AND status!='failed'`).get(symbol);
+  },
+  hasPending(xId: string): boolean {
+    return !!db.prepare(`SELECT 1 FROM launches WHERE x_id=? AND status='pending'`).get(xId);
+  },
+  /** réserve un slot de façon atomique (évite le double-clic / requêtes parallèles) */
+  reserve(
+    p: { xId: string; handle: string; name: string; symbol: string; image: string; description: string },
+    perDay: number, perHour: number,
+  ): number | "user_limit" | "global_limit" | "pending" | "symbol_taken" {
+    const tx = db.transaction(() => {
+      if (launchesRepo.symbolTaken(p.symbol)) return "symbol_taken" as const;
+      if (launchesRepo.hasPending(p.xId)) return "pending" as const;
+      if (launchesRepo.countUserLast24h(p.xId) >= perDay) return "user_limit" as const;
+      if (launchesRepo.countGlobalLastHour() >= perHour) return "global_limit" as const;
+      const r = db
+        .prepare(`INSERT INTO launches (x_id, handle, name, symbol, image, description, created_at) VALUES (?,?,?,?,?,?,?)`)
+        .run(p.xId, p.handle, p.name, p.symbol, p.image, p.description, now());
+      return Number(r.lastInsertRowid);
+    });
+    return tx.immediate();
+  },
+  markDone(id: number, r: { token: string; pool: string; txHash: string; block: number; initPrice: number }) {
+    db.prepare(`UPDATE launches SET status='done', token=?, pool=?, tx_hash=?, launch_block=?, init_price=? WHERE id=?`)
+      .run(r.token, r.pool.toLowerCase(), r.txHash, r.block, r.initPrice, id);
+  },
+  markFailed(id: number, error: string) {
+    db.prepare(`UPDATE launches SET status='failed', error=? WHERE id=?`).run(error.slice(0, 500), id);
+  },
+  byUser(xId: string): LaunchRow[] {
+    return db.prepare(`SELECT * FROM launches WHERE x_id=? AND status='done' ORDER BY id DESC`).all(xId) as LaunchRow[];
+  },
+  byToken(token: string): LaunchRow | undefined {
+    return db.prepare(`SELECT * FROM launches WHERE lower(token)=lower(?) AND status='done'`).get(token) as LaunchRow | undefined;
+  },
+  pools(): { pool: string; launch_block: number }[] {
+    return db.prepare(`SELECT pool, launch_block FROM launches WHERE status='done'`).all() as { pool: string; launch_block: number }[];
+  },
+};
+
+export const claimsRepo = {
+  insert(xId: string, recipient: string, txHash: string) {
+    db.prepare(`INSERT INTO claims (x_id, recipient, tx_hash, created_at) VALUES (?,?,?,?)`).run(xId, recipient, txHash, now());
+  },
+};

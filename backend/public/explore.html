@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/explore.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="shell">
+    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="/">Lancer</a>
+      <a href="/explore">Explorer</a>
+      <a href="/me">Mes gains</a>
+    </nav>
+    <div class="auth" data-auth></div>
+  </div>
+</header>
+
+<main class="shell">
+  <h1 class="page-title">Explorer</h1>
+  <p class="page-sub">Tous les tokens lancés depuis X sur Base, mis à jour en continu.</p>
+  <div class="toolbar">
+    <label class="sr" for="q">Rechercher un token</label>
+    <input class="input" id="q" type="search" placeholder="Nom, $ticker, @créateur ou adresse" autocomplete="off">
+    <div class="seg" role="group" aria-label="Trier">
+      <button type="button" data-sort="new" aria-pressed="true">Nouveaux</button>
+      <button type="button" data-sort="volume" aria-pressed="false">Volume 24 h</button>
+      <button type="button" data-sort="mcap" aria-pressed="false">Market cap</button>
+    </div>
+  </div>
+  <table class="tlist" id="list">
+    <thead><tr><th>Token</th><th>Market cap</th><th class="hide-sm">Volume 24 h</th><th>24 h</th><th class="hide-sm">Lancé</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="empty" id="empty" hidden></div>
+  <div class="more"><button class="btn quiet" id="more" hidden>Afficher plus</button></div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
+    <span><a href="/explore">Explorer</a></span>
+  </div>
+</footer>
+</body>
+</html>

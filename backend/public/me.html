@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/me.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="shell">
+    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="/">Lancer</a>
+      <a href="/explore">Explorer</a>
+      <a href="/me">Mes gains</a>
+    </nav>
+    <div class="auth" data-auth></div>
+  </div>
+</header>
+
+<main class="shell">
+  <h1 class="page-title">Mes gains</h1>
+  <p class="page-sub" id="meSub">Les frais de trading de tes tokens, réservés à ton compte X.</p>
+
+  <section class="panel" id="loggedOut" hidden style="max-width:520px">
+    <h2>Connecte ton compte X</h2>
+    <p class="mute" style="margin:0 0 14px">Tes gains sont rattachés à ton compte X. Connecte-toi pour les voir et les récupérer.</p>
+    <button class="btn" id="meLogin"></button>
+  </section>
+
+  <div class="gains" id="loggedIn" hidden>
+    <section class="panel">
+      <h2>Gagné au total</h2>
+      <div class="earned" id="earned">—</div>
+      <p class="mute" style="margin:0">Estimation à partir de tous les trades de tes tokens.</p>
+      <div class="escrow-list" id="escrow"></div>
+      <p class="mute" id="escrowNote" style="margin:0 0 14px"></p>
+      <form class="claim-form" id="claimForm" novalidate>
+        <label class="field"><span>Adresse qui reçoit tes gains</span>
+          <input class="input" id="recipient" placeholder="0x…" autocomplete="off" spellcheck="false">
+          <small>Une adresse sur Base (Coinbase Wallet, MetaMask, Rabby…). Vérifie-la bien : un envoi est définitif.</small>
+        </label>
+        <div class="notice" id="claimMsg" role="alert" hidden></div>
+        <button class="btn" type="submit" id="claimBtn">Récupérer mes gains</button>
+        <p class="mute" style="margin:0;font-size:14px">Le gas est offert. Ensuite, tes gains futurs arrivent directement sur cette adresse.</p>
+      </form>
+    </section>
+    <section class="panel">
+      <h2>Mes tokens</h2>
+      <table class="tlist" id="mine">
+        <thead><tr><th>Token</th><th>Volume total</th><th>Tes frais</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty" id="mineEmpty" hidden>Tu n'as encore lancé aucun token.<br><a class="btn" href="/">Lancer mon token</a></div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
+    <span><a href="/explore">Explorer</a></span>
+  </div>
+</footer>
+</body>
+</html>

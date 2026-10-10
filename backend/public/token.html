@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/token.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="shell">
+    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="/">Lancer</a>
+      <a href="/explore">Explorer</a>
+      <a href="/me">Mes gains</a>
+    </nav>
+    <div class="auth" data-auth></div>
+  </div>
+</header>
+
+<main class="shell" id="tokenPage">
+  <div class="thead">
+    <div id="tCoin"></div>
+    <div>
+      <h1 id="tTitle">Chargement…</h1>
+      <div class="meta" id="tMeta"></div>
+    </div>
+    <div class="actions">
+      <a class="btn" id="tBuy" target="_blank" rel="noopener">Acheter sur Uniswap</a>
+      <a class="btn quiet" id="tShare" target="_blank" rel="noopener"></a>
+    </div>
+  </div>
+
+  <dl class="kpis">
+    <div class="kpi"><dt>Market cap</dt><dd id="kMcap">—</dd></div>
+    <div class="kpi"><dt>Prix</dt><dd id="kPrice">—</dd></div>
+    <div class="kpi"><dt>Variation 24 h</dt><dd id="kChange">—</dd></div>
+    <div class="kpi"><dt>Volume 24 h</dt><dd id="kVol">—</dd></div>
+    <div class="kpi"><dt>Gagné par le créateur</dt><dd id="kFees">—</dd></div>
+  </dl>
+
+  <div class="tgrid">
+    <div>
+      <section class="panel">
+        <div class="chart-head"><h2 style="margin:0">Prix en ETH</h2><span class="mute" id="chartRange" style="font-size:14px"></span></div>
+        <div class="chart" id="chart" role="img" aria-label="Graphique du prix"></div>
+      </section>
+      <section class="panel">
+        <h2>Derniers trades</h2>
+        <table class="trades" id="trades">
+          <thead><tr><th>Type</th><th>ETH</th><th>Tokens</th><th class="hide-sm">Trader</th><th>Quand</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="mute" id="noTrades" hidden style="margin:8px 0 0">Aucun trade pour l'instant. Le premier acheteur obtient le prix de départ.</p>
+      </section>
+    </div>
+    <aside>
+      <section class="panel">
+        <h2>À propos</h2>
+        <p class="desc" id="tDesc" hidden></p>
+        <dl class="facts">
+          <div><dt>Contrat</dt><dd><button class="copy" id="tAddr"></button></dd></div>
+          <div><dt>Pool</dt><dd><a id="tPool" target="_blank" rel="noopener"></a></dd></div>
+          <div><dt>Supply</dt><dd>1 000 000 000</dd></div>
+          <div><dt>Frais de trading</dt><dd>1 %</dd></div>
+          <div><dt>Liquidité</dt><dd>Verrouillée à vie</dd></div>
+          <div><dt>Trades</dt><dd id="tTrades">—</dd></div>
+        </dl>
+      </section>
+      <section class="panel">
+        <h2>Tu as lancé ce token ?</h2>
+        <p class="mute" style="margin:0 0 12px">Tes frais de trading t'attendent, réservés à ton compte X.</p>
+        <a class="btn quiet wide" href="/me">Voir mes gains</a>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
+    <span><a href="/explore">Explorer</a></span>
+  </div>
+</footer>
+</body>
+</html>

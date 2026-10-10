@@ -1,0 +1,16 @@
+{
+  "name": "xlaunch-contracts",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "compile": "node compile.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "solc": "^0.8.26"
+  },
+  "private": true
+}

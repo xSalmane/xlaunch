@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/home.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="shell">
+    <a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="/">Lancer</a>
+      <a href="/explore">Explorer</a>
+      <a href="/me">Mes gains</a>
+    </nav>
+    <div class="auth" data-auth></div>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <div>
+      <h1>Ton token,<br>en un post.</h1>
+      <p class="lede">Choisis un nom et un ticker, on le déploie sur Base avec sa pool Uniswap. Le gas est pour nous. À chaque trade, tu touches <span data-fee-share>la moitié</span> des frais.</p>
+
+      <form class="composer" id="composer" novalidate>
+        <div class="pair">
+          <label class="field"><span>Nom</span>
+            <input class="input" name="name" id="name" maxlength="32" required autocomplete="off" placeholder="Croissant">
+          </label>
+          <label class="field"><span>Ticker</span>
+            <input class="input ticker-input" name="symbol" id="symbol" maxlength="10" required autocomplete="off" placeholder="CRSNT">
+          </label>
+        </div>
+        <label class="field"><span>Description <small>(optionnelle)</small></span>
+          <textarea class="input" name="description" id="description" maxlength="280" placeholder="En une phrase, pourquoi ce token ?"></textarea>
+        </label>
+        <div class="upload">
+          <label class="btn quiet small" for="file">Ajouter un logo</label>
+          <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp">
+          <span class="mute" id="fileInfo" style="font-size:14px">PNG, JPG, GIF ou WebP, 1 Mo max.</span>
+        </div>
+        <div class="notice" id="formMsg" role="alert" hidden></div>
+        <div class="composer-foot">
+          <button class="btn" type="submit" id="launchBtn">Lancer sur Base</button>
+          <span class="mute" id="quota">Connexion X requise. Gas offert.</span>
+        </div>
+      </form>
+
+      <div class="composer done-panel" id="done" hidden>
+        <h2 id="doneTitle">C'est lancé.</h2>
+        <p class="mute" style="margin:0">Ton token est en ligne et déjà échangeable. Partage-le pour attirer les premiers acheteurs : chaque trade te rapporte des frais.</p>
+        <div class="done-actions">
+          <a class="btn" id="doneShare" target="_blank" rel="noopener"></a>
+          <a class="btn quiet" id="donePage">Voir la page du token</a>
+          <button class="btn quiet" type="button" id="doneAgain">Lancer un autre token</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" aria-live="polite">
+      <div class="coin big-coin" id="bigCoin" style="--h:220"><span class="sym" id="coinSym"><small>$</small>TICKER</span></div>
+      <div class="stage-name" id="stageName">Ton token</div>
+      <div class="stage-meta">1 milliard d'unités, 100 % dans la pool</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Lancés à l'instant</h2>
+      <div class="stats-line" id="stats"></div>
+    </div>
+    <table class="tlist" id="live">
+      <thead><tr><th>Token</th><th>Market cap</th><th class="hide-sm">Volume 24 h</th><th>24 h</th><th class="hide-sm">Lancé</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="empty" id="liveEmpty" hidden>Aucun token pour l'instant. Le premier, c'est peut-être le tien.</div>
+    <div class="more"><a class="btn quiet" href="/explore">Voir tous les tokens</a></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Comment ça marche</h2></div>
+    <ol class="steps">
+      <li><h3>Connecte ton compte X</h3><p>Pas de wallet à brancher. Ton compte X sert d'identité et garde tes gains de côté.</p></li>
+      <li><h3>Nomme ton token</h3><p>On le déploie sur Base avec toute la supply dans une pool Uniswap verrouillée. Personne ne reçoit de tokens au départ, toi compris.</p></li>
+      <li><h3>Partage et touche les frais</h3><p>Chaque achat ou vente paie 1 % de frais, dont <span data-fee-share>la moitié</span> pour toi. Récupère-les quand tu veux, sans payer de gas.</p></li>
+    </ol>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>XLaunch sur Base. Les tokens créés ici sont spéculatifs : ne mise que ce que tu peux perdre.</span>
+    <span><a href="/explore">Explorer</a></span>
+  </div>
+</footer>
+</body>
+</html>
