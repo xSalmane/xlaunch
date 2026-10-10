@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mission Control</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@500..800&family=Funnel+Sans:wght@400..700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="/static/proto/proto.css">
+<style>
+  body { background: #0a0b0d; color: #fff; background-image: linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px); background-size: 24px 24px; display: flex; flex-direction: column; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .hd { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; font: 700 11px/1 "JetBrains Mono", monospace; letter-spacing: 0.08em; }
+  .hd b { display: inline-flex; align-items: center; gap: 7px; }
+  .hd b i { width: 9px; height: 9px; border-radius: 50%; background: #66c800; box-shadow: 0 0 0 3px rgb(102 200 0 / 0.25); }
+  .clock { color: #3c8aff; }
+  main { position: relative; flex: 1; min-height: 0; }
+  .scr { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 0 12px 10px; }
+  .status { display: flex; gap: 6px; font: 700 10px/1 "JetBrains Mono", monospace; letter-spacing: 0.06em; }
+  .status span { padding: 5px 7px; border: 1px solid #32353d; border-radius: 6px; color: #b1b7c3; }
+  .status span::before { content: "●"; color: #66c800; margin-right: 5px; }
+  .stage { position: relative; flex: 1; min-height: 0; }
+  .tower { position: absolute; left: 50%; bottom: 0; width: 120px; margin-left: -60px; height: 10px; border-radius: 4px; background: #32353d; }
+  .tower::before, .tower::after { content: ""; position: absolute; bottom: 10px; width: 6px; height: 120px; background: repeating-linear-gradient(0deg, #32353d 0 8px, transparent 8px 14px); }
+  .tower::before { left: 8px; } .tower::after { right: 8px; }
+  .coin { position: absolute; left: 50%; bottom: 14px; width: 92px; height: 92px; margin-left: -46px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 4px #fff; z-index: 2; }
+  .flame { position: absolute; left: 50%; bottom: -6px; width: 40px; margin-left: -20px; height: 0; z-index: 1; border-radius: 50% 50% 45% 45%; background: #0000ff; box-shadow: 0 0 0 6px #3c8aff, 0 0 30px 12px #3c8aff; transition: height 0.3s; }
+  .flame.on { height: 70px; animation: flick 0.08s infinite alternate; }
+  @keyframes flick { to { transform: scaleX(0.82) scaleY(1.1); } }
+  form { display: grid; grid-template-columns: 1fr 0.7fr; gap: 6px; }
+  form input, form select { border: 1px solid #32353d; background: #16181d; border-radius: 8px; padding: 8px 10px; outline: none; font: 600 14px "JetBrains Mono", monospace; text-transform: uppercase; }
+  form input:focus { border-color: #3c8aff; }
+  .ignite { grid-column: 1 / -1; border: 0; border-radius: 10px; padding: 12px; background: #0000ff; color: #fff; font: 800 17px/1 "Funnel Display", sans-serif; letter-spacing: 0.12em; cursor: pointer; box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.35); }
+  .ignite:active { transform: translateY(2px); box-shadow: none; }
+  .count { position: absolute; inset: 0; display: grid; place-items: center; z-index: 5; pointer-events: none; font: 800 190px/1 "Funnel Display", sans-serif; letter-spacing: -0.06em; color: #fff; }
+  .count span { animation: pop 0.62s cubic-bezier(.2,.9,.2,1) both; }
+  .count .lift { font-size: 64px; letter-spacing: 0.02em; color: #3c8aff; }
+  @keyframes pop { 0% { transform: scale(2.4); opacity: 0; } 30% { transform: scale(1); opacity: 1; } 80% { opacity: 1; } 100% { transform: scale(0.85); opacity: 0; } }
+  .shake { animation: shake 0.5s linear; }
+  @keyframes shake { 10%, 50%, 90% { transform: translate(-4px, 2px); } 30%, 70% { transform: translate(4px, -2px); } }
+  .smoke { position: absolute; bottom: 0; width: 46px; height: 46px; border-radius: 50%; background: #32353d; opacity: 0; z-index: 1; }
+  .smoke.go { animation: smoke 1.4s ease-out forwards; }
+  @keyframes smoke { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: translate(var(--dx), -20px) scale(2.2); } }
+  .tele { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .tele div { border: 1px solid #32353d; border-radius: 10px; padding: 9px 10px; background: #111317; }
+  .tele dt { font: 700 10px/1 "JetBrains Mono", monospace; letter-spacing: 0.08em; color: #8b919d; }
+  .tele dd { margin: 6px 0 0; font: 800 24px/1 "Funnel Display", sans-serif; letter-spacing: -0.02em; }
+  .tele .ok { color: #66c800; }
+  .orbit-top { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .orbit-top .coin { position: relative; left: auto; bottom: auto; margin: 0; width: 64px; height: 64px; animation: spin 6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .orbit-top h2 { margin: 0; font: 800 28px/1 "Funnel Display", sans-serif; letter-spacing: -0.03em; }
+  .orbit-top p { margin: 4px 0 0; font: 700 11px "JetBrains Mono", monospace; color: #66c800; letter-spacing: 0.06em; }
+  .acts { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; margin-top: auto; }
+  .acts a { text-align: center; padding: 11px; border-radius: 10px; font-weight: 800; text-decoration: none; }
+  .acts .a1 { background: #fff; color: #0a0b0d; } .acts .a2 { border: 1px solid #32353d; color: #fff; }
+  .log { overflow: hidden; display: grid; gap: 0; font: 600 12px/1.2 "JetBrains Mono", monospace; }
+  .log h3 { margin: 2px 0 8px; font: 700 11px "JetBrains Mono", monospace; letter-spacing: 0.08em; color: #8b919d; }
+  .row { display: grid; grid-template-columns: 62px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #22252b; animation: rowin 0.4s both; }
+  @keyframes rowin { from { opacity: 0; transform: translateX(-10px); } }
+  .row .id { color: #3c8aff; } .row b { font: 800 15px "Funnel Display", sans-serif; } .row .st { color: #66c800; font-size: 10px; }
+  .row .up { color: #66c800; } .row .down { color: #fc401f; }
+  .tabs3 { padding: 0 12px 10px; } .tabs3 button { flex: 1; padding: 8px; border-radius: 8px; background: #16181d; color: #8b919d; font: 700 11px "JetBrains Mono", monospace; letter-spacing: 0.08em; }
+  .tabs3 button.on { background: #fff; color: #0a0b0d; }
+</style>
+<script src="/static/app.js" defer></script><script src="/static/proto/proto-common.js" defer></script><script src="/static/proto/mission.js" defer></script>
+</head><body data-compact>
+<header class="hd"><b><i></i>XLAUNCH MISSION CONTROL</b><span class="clock" id="clock">T-00:00:10</span></header>
+<main id="main">
+  <section class="scr" id="pad">
+    <div class="status"><span>FUEL</span><span>GAS SPONSORED</span><span>PAD BASE</span></div>
+    <div class="stage" id="stage"><div class="tower"></div><div class="flame" id="flame"></div><div class="coin cov" id="coin"></div></div>
+    <form id="f"><input id="name" placeholder="MISSION NAME" autocomplete="off"><select id="pair"><option>ETH</option><option>USDC</option><option>tNVDA</option></select><button class="ignite" id="go">IGNITE</button></form>
+  </section>
+  <section class="scr" id="orbit" hidden>
+    <div class="orbit-top"><div class="coin cov" id="coin2"></div><div><h2 id="oSym"></h2><p>● IN ORBIT · LIVE ON BASE</p></div></div>
+    <dl class="tele">
+      <div><dt>ALTITUDE · MCAP</dt><dd id="alt">$0</dd></div>
+      <div><dt>VELOCITY · 1H</dt><dd class="ok" id="vel">+0%</dd></div>
+      <div><dt>CREW · LIKES</dt><dd id="crew">0</dd></div>
+      <div><dt>FUEL BURNED · GAS</dt><dd>$0</dd></div>
+    </dl>
+    <div class="acts"><a class="a1" href="#">Share on X</a><a class="a2" href="#">Telemetry</a></div>
+  </section>
+  <section class="scr log" id="log" hidden><h3>MISSION LOG · MOST LIKED</h3><div id="rows"></div></section>
+  <div class="count" id="count"></div>
+</main>
+<nav class="tabs3"><button class="on" data-v="pad">LAUNCH</button><button data-v="log">HOT</button><button data-v="log">NEW</button></nav>
+</body></html>
