@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/static/landing.css">
 <script src="/static/app.js" defer></script>
 <script src="/static/landing.js" defer></script>
+<script src="/static/hero.js" defer></script>
 </head>
 <body class="l">
 <header class="l-nav">
@@ -25,7 +26,6 @@
 </header>
 
 <main>
-  <!-- le mur : chaque carré est un token lancé depuis X -->
   <section class="l-hero">
     <div class="l-copy">
       <h1>Post it on X.<br>It trades on Base.</h1>
@@ -41,17 +41,7 @@
         <div><dt>Gas you pay</dt><dd>$0</dd></div>
       </dl>
     </div>
-    <figure class="l-pool">
-      <div class="p-wrap" id="poolWrap">
-        <canvas id="pool" aria-hidden="true"></canvas>
-        <div class="p-tip" id="poolTip" hidden></div>
-      </div>
-      <figcaption class="p-cap" aria-live="polite">
-        <a class="p-info" id="poolInfo" href="/app#compose"></a>
-        <span class="p-hint">Every token launched from X floats here, with 100% of its supply in the pool. Stir the water.</span>
-      </figcaption>
-      <nav class="sr" id="poolLinks" aria-label="Tokens in the pool"></nav>
-    </figure>
+    <figure class="hv" id="hv"></figure>
   </section>
 
   <section class="l-band l-steps" aria-labelledby="stepsTitle">

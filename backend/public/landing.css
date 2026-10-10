@@ -29,23 +29,6 @@ body.l { background: var(--bg); font-size: 16px; }
 .l-live dt { font-size: 14px; color: var(--mute); }
 .l-live dd { margin: 2px 0 0; font: 700 30px/1.1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 
-/* ------------------------------------------------------------ la pool : chaque token flotte dans l'eau bleu Base */
-.l-pool { margin: 0; display: grid; justify-items: center; gap: 14px; min-width: 0; }
-.p-wrap { position: relative; width: min(100%, 540px); aspect-ratio: 1; touch-action: pan-y; }
-.p-wrap canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
-.p-wrap.over-token canvas { cursor: pointer; }
-.p-tip { position: absolute; z-index: 2; pointer-events: none; transform: translate(-50%, calc(-100% - 12px)); padding: 7px 11px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 13px; line-height: 1.3; white-space: nowrap; }
-.p-tip b { display: block; font: 700 15px/1.2 var(--display); }
-.p-cap { display: grid; justify-items: center; gap: 6px; text-align: center; max-width: 440px; }
-.p-info { padding: 4px 10px; border-radius: 12px; min-width: 0; max-width: 100%; }
-.p-info:hover { background: var(--soft); }
-.p-info b { display: block; font: 700 22px/1.2 var(--display); letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p-info .p-sub { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--mute); }
-.p-info .p-sub strong { color: var(--ink); }
-.p-info .p-likes { color: var(--heart); font-weight: 700; }
-.p-new { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--gold); color: #0a0b0d; font: 700 12px/1.6 var(--text); vertical-align: middle; }
-.p-hint { font-size: 14px; color: var(--mute); }
-
 /* ------------------------------------------------------------ bandes */
 .l-band { max-width: 1240px; margin: 0 auto; padding: clamp(56px, 7vw, 96px) 24px; border-top: 1px solid var(--line); }
 .l-band h2 { font-size: clamp(32px, 3.8vw, 52px); line-height: 1; letter-spacing: -0.035em; font-weight: 700; max-width: 16em; }
@@ -146,3 +129,110 @@ body.l { background: var(--bg); font-size: 16px; }
   .l-live { gap: 12px 26px; margin-top: 32px; }
   .l-live dd { font-size: 24px; }
 }
+
+/* ============================================================ hero animé (3 variantes à essayer : ?hero=a|b|c) */
+.hv { margin: 0; min-width: 0; }
+
+/* ------------------------------------------------------------ A. le ticker géant, lettres en rouleaux */
+.l-hero.is-a { grid-template-columns: 1fr; gap: 28px; }
+.is-a .l-copy { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); column-gap: clamp(32px, 6vw, 96px); align-items: end; }
+.is-a .l-copy h1 { grid-row: 1 / span 3; font-size: clamp(42px, 5.4vw, 80px); }
+.is-a .l-lede { margin: 0 0 22px; }
+.is-a .l-live { grid-column: 1 / -1; margin-top: 28px; }
+.tk { border-top: 1px solid var(--line); padding-top: 18px; }
+.tk-bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin-bottom: 10px; }
+.tk-bars span { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.tk-bars span i { display: block; height: 100%; width: 0; background: var(--ink); }
+.tk-bars span.done i { width: 100%; }
+.tk-bars span.on i { animation: tkFill var(--dur, 3.6s) linear forwards; }
+.tk.paused .tk-bars span.on i { animation-play-state: paused; }
+@keyframes tkFill { to { width: 100%; } }
+.tk-line { display: flex; font: 800 clamp(76px, 17.5vw, 270px)/1 var(--display); letter-spacing: -0.055em; color: var(--ink); white-space: nowrap; overflow: hidden; padding-bottom: 0.04em; cursor: pointer; }
+.tk-cell { display: inline-block; height: 1em; overflow: hidden; transition: width 0.55s cubic-bezier(.2,.9,.25,1); }
+.tk-reel { display: block; will-change: transform; }
+.tk-reel > span { display: block; height: 1em; line-height: 1; }
+.tk-cell.dollar { color: var(--fill); }
+:root[data-theme="dark"] .tk-cell.dollar { color: var(--blue); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tk-cell.dollar { color: var(--blue); } }
+.tk-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; font-size: 17px; color: var(--mute); margin-top: 6px; }
+.tk-meta strong { color: var(--ink); font: 700 22px/1.2 var(--display); }
+.tk-meta .tk-likes { color: var(--heart); font-weight: 700; }
+.tk-meta a { color: var(--blue); font-weight: 600; margin-left: auto; }
+.tk-meta a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tk-measure { position: absolute; visibility: hidden; white-space: pre; font: 800 clamp(76px, 17.5vw, 270px)/1 var(--display); letter-spacing: -0.055em; }
+
+/* ------------------------------------------------------------ B. le tweet qui devient token */
+.tw-stage { position: relative; min-height: 470px; display: grid; align-items: center; justify-items: center; }
+.tw { width: min(100%, 500px); border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 12px; background: var(--bg); box-shadow: 0 24px 60px -24px rgb(10 11 13 / 0.28); transition: transform 0.6s cubic-bezier(.2,.9,.2,1), opacity 0.45s; }
+.tw.out { transform: translateY(-36px) scale(0.97); opacity: 0; }
+.tw.in { transform: translateY(36px) scale(0.97); opacity: 0; transition: none; }
+.tw-head { display: flex; align-items: center; gap: 10px; line-height: 1.25; }
+.tw-av { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: none; background: var(--fill); color: #fff; display: grid; place-items: center; font-weight: 800; }
+.tw-av img { width: 100%; height: 100%; object-fit: cover; }
+.tw-who { min-width: 0; flex: 1; }
+.tw-who b { display: block; }
+.tw-who span { color: var(--mute); font-size: 14px; }
+.tw-x { width: 20px; height: 20px; fill: var(--ink); flex: none; }
+.tw-text { font-size: 19px; line-height: 1.4; margin: 12px 0 14px; min-height: 2.8em; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tw-text .cash { color: var(--blue); }
+.tw-caret { display: inline-block; width: 2px; height: 1.1em; vertical-align: -0.18em; background: var(--fill); margin-left: 1px; animation: caret 0.9s steps(1) infinite; }
+.tw.typed .tw-caret { display: none; }
+@keyframes caret { 50% { opacity: 0; } }
+.tw-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; max-height: 0; opacity: 0; transform: translateY(8px); transition: max-height 0.6s cubic-bezier(.2,.9,.2,1), opacity 0.35s, transform 0.5s; }
+.tw.carded .tw-card { max-height: 140px; opacity: 1; transform: none; }
+.tw-cover { display: block; position: relative; aspect-ratio: 1; background: var(--soft); }
+.tw-cover > svg, .tw-cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tw-body { padding: 12px 14px; display: grid; align-content: center; gap: 2px; min-width: 0; }
+.tw-body b { font: 700 22px/1.1 var(--display); letter-spacing: -0.02em; }
+.tw-body .tw-name { color: var(--mute); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tw-price { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.tw-price strong { font: 700 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+.tw-spark { height: 26px; margin-top: 4px; }
+.tw-spark svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.tw-spark path:last-child { stroke-dasharray: 400; stroke-dashoffset: 400; }
+.tw.carded .tw-spark path:last-child { animation: twDraw 1.4s 0.3s ease-out forwards; }
+.tw-spark .area { opacity: 0.12; }
+@keyframes twDraw { to { stroke-dashoffset: 0; } }
+.tw-acts { display: flex; justify-content: space-between; color: var(--mute); font-size: 14px; margin-top: 12px; padding: 0 4px; }
+.tw-acts span { display: inline-flex; align-items: center; gap: 6px; }
+.tw-acts svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tw-acts .tw-like { color: var(--heart); }
+.tw-acts .tw-like svg { fill: currentColor; stroke: none; }
+.tw-acts .tw-like b { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------ C. l'éventail de cartes à collectionner */
+.fan-stage { position: relative; height: clamp(420px, 40vw, 540px); }
+.fc { --w: clamp(150px, 14vw, 210px); position: absolute; left: 50%; bottom: 96px; width: var(--w); margin-left: calc(var(--w) / -2); padding: 9px 9px 12px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 18px 40px -18px rgb(10 11 13 / 0.35); transform-origin: 50% 190%; transition: transform 0.75s cubic-bezier(.2,.9,.2,1), opacity 0.4s, box-shadow 0.3s; }
+.fc.front { box-shadow: 0 28px 60px -20px rgb(10 11 13 / 0.45); }
+.fc.wrap { opacity: 0; transition: none; }
+.fc-cover { display: block; position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--soft); }
+.fc-cover > svg, .fc-cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fc b { display: block; margin-top: 9px; font: 700 19px/1.1 var(--display); letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-row { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--mute); margin-top: 3px; }
+.fc-row strong { color: var(--ink); }
+.fc.yours { background: var(--fill); border-color: var(--fill); color: #fff; }
+.fc.yours .fc-cover { background: rgb(255 255 255 / 0.12); display: grid; place-items: center; font: 400 72px/1 var(--display); color: #fff; }
+.fc.yours .fc-row { color: rgb(255 255 255 / 0.8); }
+.fan-info { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; }
+.fan-info b { font: 700 22px/1.2 var(--display); letter-spacing: -0.02em; }
+.fan-info .p-sub { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--mute); }
+.fan-info strong { color: var(--ink); }
+.fan-info .likes { color: var(--heart); font-weight: 700; }
+:root[data-theme="dark"] .fc, :root[data-theme="dark"] .tw { background: var(--soft); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fc:not(.yours), :root:not([data-theme="light"]) .tw { background: var(--soft); } }
+
+@media (max-width: 960px) {
+  .is-a .l-copy { grid-template-columns: 1fr; }
+  .is-a .l-copy h1 { grid-row: auto; margin-bottom: 18px; }
+  .tw-stage { min-height: 420px; }
+}
+@media (max-width: 640px) {
+  .tk-meta { font-size: 15px; gap: 4px 14px; }
+  .tk-meta strong { font-size: 18px; }
+  .tk-meta a { margin-left: 0; }
+  .tw-card { grid-template-columns: 92px minmax(0, 1fr); }
+  .tw-text { font-size: 17px; }
+  .fan-stage { height: 400px; }
+  .fc { --w: 150px; }
+}
+.p-new { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--gold); color: #0a0b0d; font: 700 12px/1.6 var(--text); vertical-align: middle; letter-spacing: 0; }
