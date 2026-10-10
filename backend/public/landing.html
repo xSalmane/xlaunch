@@ -41,9 +41,20 @@
         <div><dt>Gas you pay</dt><dd>$0</dd></div>
       </dl>
     </div>
-    <figure class="l-wall-wrap">
-      <div class="l-wall" id="wall" aria-label="Tokens launched from X"></div>
-      <figcaption class="l-wall-cap"><span class="live-dot"></span>Every square is a token launched from X. New ones land here live.</figcaption>
+    <figure class="l-mint" id="mint">
+      <div class="m-stage" id="stage" aria-hidden="true">
+        <div class="m-coin" id="coin3d">
+          <div class="m-face m-front" id="faceA"></div>
+          <div class="m-face m-back" id="faceB"></div>
+        </div>
+        <div class="m-shadow" id="coinShadow"></div>
+      </div>
+      <figcaption class="m-cap" aria-live="polite">
+        <button class="m-nav" type="button" id="prevCoin" aria-label="Previous token"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+        <a class="m-info" id="coinInfo" href="/app#compose"></a>
+        <button class="m-nav" type="button" id="nextCoin" aria-label="Next token"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      </figcaption>
+      <p class="m-hint">Every token launched from X, minted as a coin. Drag to flip.</p>
     </figure>
   </section>
 
