@@ -34,7 +34,7 @@ def page(script, content):
 <link rel="apple-touch-icon" href="/static/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@400..800&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js" defer></script>
 {f'<script src="/static/{script}" defer></script>' if script else ""}

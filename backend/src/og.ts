@@ -11,8 +11,8 @@ const fontFiles = (pkg: string, prefix: string, weights: string[]) => {
   const dir = path.dirname(require.resolve(`@expo-google-fonts/${pkg}/package.json`));
   return weights.map((w) => path.join(dir, w, `${prefix}_${w}.ttf`)).filter((f) => fs.existsSync(f));
 };
-// mêmes polices que le site : Funnel Display pour les titres, Funnel Sans pour le texte
-const FONTS = [...fontFiles("funnel-display", "FunnelDisplay", ["700Bold", "800ExtraBold"]), ...fontFiles("funnel-sans", "FunnelSans", ["500Medium", "700Bold"])];
+// mêmes polices que le site : Funnel Sans partout (Funnel Display a des éperons qui ressemblent à des points)
+const FONTS = [...fontFiles("funnel-sans", "FunnelSans", ["500Medium", "700Bold", "800ExtraBold"])];
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 
@@ -55,7 +55,7 @@ export function artSvg(t: { token: string | null; symbol: string }, id: string) 
       <rect width="100" height="100" fill="url(#${id})"/>${pat}
       <circle cx="50" cy="50" r="27" fill="hsl(${h1},85%,52%)" stroke="#fff" stroke-opacity="0.95" stroke-width="2.4"/>
       <circle cx="50" cy="50" r="22.5" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="1.2"/>
-      <text x="50" y="50" dy="0.35em" text-anchor="middle" font-family="Funnel Display" font-weight="700" font-size="${fs_.toFixed(1)}" fill="#fff">${esc(sym)}</text>`,
+      <text x="50" y="50" dy="0.35em" text-anchor="middle" font-family="Funnel Sans" font-weight="700" font-size="${fs_.toFixed(1)}" fill="#fff">${esc(sym)}</text>`,
   };
 }
 
@@ -115,17 +115,17 @@ export function renderTokenCard(t: TokenView & { spark?: number[] }, opts: { upl
   </g>
   ${milestone}
   <text x="640" y="150" font-size="28" font-weight="500" fill="#ffffff" fill-opacity="0.7">@${esc(fit(t.creator, 15))} · paired with ${esc(t.quote.symbol)}</text>
-  <text x="634" y="${150 + symSize + 4}" font-family="Funnel Display" font-size="${symSize}" font-weight="800" fill="#ffffff" letter-spacing="-3">${esc(sym)}</text>
+  <text x="634" y="${150 + symSize + 4}" font-family="Funnel Sans" font-size="${symSize}" font-weight="800" fill="#ffffff" letter-spacing="-3">${esc(sym)}</text>
   <text x="640" y="${150 + symSize + 52}" font-size="32" font-weight="500" fill="#ffffff" fill-opacity="0.82">${esc(fit(t.name, 26))}</text>
-  <text x="640" y="410" font-family="Funnel Display" font-size="58" font-weight="800" fill="#ffffff">${usd(t.mcapUsd)}<tspan dx="18" font-size="34" fill="${col}">${pct(t.change24h)}</tspan></text>
+  <text x="640" y="410" font-family="Funnel Sans" font-size="58" font-weight="800" fill="#ffffff">${usd(t.mcapUsd)}<tspan dx="18" font-size="34" fill="${col}">${pct(t.change24h)}</tspan></text>
   <text x="640" y="350" font-size="22" font-weight="500" fill="#ffffff" fill-opacity="0.55">MARKET CAP</text>
   <path d="${sp.area}" fill="url(#fade)"/>
   <path d="${sp.line}" fill="none" stroke="${col}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
   <path transform="translate(640,551)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.2 0 3.7 1.2 5.2 3 1.5-1.8 3-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z" fill="#fc401f"/>
   <text x="674" y="575" font-size="26" font-weight="700" fill="#ffffff">${t.likes}<tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.trades} trade${t.trades === 1 ? "" : "s"}</tspan><tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.comments} comment${t.comments === 1 ? "" : "s"}</tspan></text>
   <rect x="0" y="${H - 8}" width="${W}" height="8" fill="#0000ff"/>
-  <svg x="${Math.round(1130 - opts.site.length * 30 * 0.555 - 52)}" y="34" width="38" height="38" viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="22" fill="#0000ff"/><circle cx="36" cy="44" r="15" fill="#fff"/><circle cx="40" cy="44" r="7" fill="#0000ff"/><path d="M58,30 L80,44 L58,58" fill="none" stroke="#ffd12f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M24,74 H54" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>
-  <text x="1130" y="62" font-family="Funnel Display" font-size="30" font-weight="700" fill="#ffffff" text-anchor="end">${esc(opts.site)}</text>
+  <svg x="${Math.round(1130 - opts.site.length * 30 * 0.48 - 50)}" y="34" width="38" height="38" viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="22" fill="#0000ff"/><circle cx="36" cy="44" r="15" fill="#fff"/><circle cx="40" cy="44" r="7" fill="#0000ff"/><path d="M58,30 L80,44 L58,58" fill="none" stroke="#ffd12f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M24,74 H54" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>
+  <text x="1130" y="62" font-family="Funnel Sans" font-size="30" font-weight="700" fill="#ffffff" text-anchor="end">${esc(opts.site)}</text>
   <text x="1130" y="94" font-size="16" font-weight="700" fill="#ffffff" fill-opacity="0.45" text-anchor="end" letter-spacing="2">${esc(opts.chainLabel)}</text>
 </svg>`;
 
