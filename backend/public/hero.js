@@ -228,6 +228,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const NS = "http://www.w3.org/2000/svg";
     let W = 0, H = 0, idx = 0, run = 0, flights = 0;
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // aucun token encore (mainnet au lancement) : vols d'exemple, signalés comme tels, qui mènent au compositeur
+    const DEMO = [
+      { symbol: "YOURS", spark: [1, 1.4, 1.2, 2.1, 2.6, 3.4, 3.1, 4.4], change24h: 0.9 },
+      { symbol: "GM", spark: [1, 0.9, 1.5, 1.9, 1.7, 2.4, 2.9], change24h: 0.5 },
+      { symbol: "BIRD", spark: [1, 1.6, 1.3, 1.8, 2.7, 2.5, 3.6, 3.9], change24h: 0.7 },
+      { symbol: "BASED", spark: [1, 1.2, 1.1, 1.7, 2.2, 2.0, 2.8], change24h: 0.3 },
+    ].map((t, i) => ({ ...t, demo: true, token: "demo-" + i, name: t.symbol, creator: "you", creatorAvatar: "", likes: 0, mcapUsd: 0 }));
+    const list = () => (tokens.length ? tokens : DEMO);
 
     function measure() {
       const b = ln.getBoundingClientRect();
@@ -329,12 +337,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const end = cur.getPointAtLength(len);
       coin.style.transform = `translate(${end.x}px, ${end.y}px) rotate(0deg)`;
       ring(end.x, end.y, 30);
-      pin.href = "/t/" + t.token;
-      pin.innerHTML = `<b>$${fmt.esc(t.symbol)}${fresh.has(t.token) ? `<span class="p-new">Just launched</span>` : ""}</b><span><strong>${fmt.usd(t.mcapUsd)}</strong> ${fmt.pct(t.change24h)} · ♥ ${fmt.count(t.likes)}</span>`;
+      pin.href = t.demo ? "/app#compose" : "/t/" + t.token;
+      pin.innerHTML = t.demo
+        ? `<b>$${fmt.esc(t.symbol)}<span class="p-new">Example</span></b><span>Your token could fly here</span>`
+        : `<b>$${fmt.esc(t.symbol)}${fresh.has(t.token) ? `<span class="p-new">Just launched</span>` : ""}</b><span><strong>${fmt.usd(t.mcapUsd)}</strong> ${fmt.pct(t.change24h)} · ♥ ${fmt.count(t.likes)}</span>`;
       pin.style.left = end.x + "px"; pin.style.top = end.y + "px";
       pin.classList.add("on");
       flights++;
-      $("lnCount").innerHTML = `<b>${fmt.count(tokens.length)}</b>tokens launched from X`;
+      $("lnCount").innerHTML = tokens.length ? `<b>${fmt.count(tokens.length)}</b>tokens launched from X` : `<b>Be first.</b>launch the first token from X`;
       await wait(reduce ? 0 : 2200); if (my !== run) return;
       // 5. la traînée reste au ciel, la pièce devient un point
       const old = document.createElementNS(NS, "path");
@@ -353,16 +363,16 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loop() {
       const my = ++run;
       while (my === run) {
-        if (!tokens.length) { await wait(3000); continue; }
-        const f = tokens.findIndex((t) => fresh.has(t.token)); // un nouveau lancement passe devant
+        const L = list();
+        const f = L.findIndex((t) => fresh.has(t.token)); // un nouveau lancement passe devant
         if (f >= 0) idx = f;
-        await fly(tokens[idx % tokens.length], my);
+        await fly(L[idx % L.length], my);
         if (reduce) {
           // sans animation : toutes les trajectoires d'un coup, la dernière étiquetée
-          if (++idx < Math.min(tokens.length, 6)) continue;
+          if (++idx < Math.min(L.length, 6)) continue;
           return;
         }
-        idx = (idx + 1) % tokens.length;
+        idx = (idx + 1) % L.length;
       }
     }
     load().then(loop);
