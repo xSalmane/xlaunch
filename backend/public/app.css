@@ -547,3 +547,6 @@ body.has-banner .side-nav { height: calc(100vh - 30px); }
   .ref-stats div:nth-child(3) { border-left: 0; }
   .ref-stats div:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
+
+/* ============================================================ logo Bluebird (l'oiseau-terminal) */
+.brand-mark { background: url("/static/logo.svg") center / contain no-repeat !important; box-shadow: none !important; border-radius: 0 !important; }
