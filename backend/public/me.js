@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadRefs() {
     const r = (refs = await api("/api/referrals"));
     const share = Math.round(r.shareBps / 100), platform = Math.round((10_000 - r.creatorFeeBps) / 100);
-    $("refExplain").textContent = `You get ${share}% of the platform's cut (${platform}% of the trading fees) on every token launched by people you invite. For life, paid in ETH.`;
+    $("refExplain").textContent = `You get ${share}% of the platform's cut (${platform}% of the trading fees) on every token launched by people you invite. For life, paid in ETH. Earnings count once the fees are collected on-chain (about every hour).`;
     $("refLink").value = r.link;
     $("refShare").innerHTML = `${XL.X_SVG} Share my invite on X`;
     $("refShare").href = "https://x.com/intent/post?" + new URLSearchParams({ text: "Launch your own token on Base straight from X. No wallet needed, gas is on us 🔵", url: r.link });

@@ -94,9 +94,12 @@ export async function initQuotes() {
   }
 
   if (config.chain === "base") {
-    for (const s of STOCKS) {
+    // chaque action doit exister on-chain : une adresse vide donnerait une pool où aucun swap ne passe
+    const live = await Promise.all(STOCKS.map((s) => hasCode(s.address)));
+    STOCKS.forEach((s, i) => {
+      if (!live[i]) { console.warn(`${s.symbol} introuvable à ${s.address} : paire désactivée`); return; }
       list.push({ address: s.address, symbol: s.symbol, name: s.name, kind: "stock", decimals: 18, usd: s.ref, icon: "", mock: false, paused: false });
-    }
+    });
   } else if (config.mockStocks) {
     const mocks = await loadOrDeployMocks();
     for (const s of STOCKS) {

@@ -111,6 +111,18 @@ CREATE TABLE IF NOT EXISTS referral_payouts (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS referral_payouts_user ON referral_payouts(x_id);
+
+-- frais réellement collectés par le contrat (événements FeesCollected) : base des gains de parrainage.
+-- On ne se fie pas au volume, qu'on peut gonfler par wash trading contre sa propre liquidité.
+CREATE TABLE IF NOT EXISTS fee_collections (
+  tx_hash   TEXT NOT NULL,
+  log_index INTEGER NOT NULL,
+  token     TEXT NOT NULL,            -- adresse du token lancé (minuscules)
+  quote_amt REAL NOT NULL,            -- frais côté actif de paire, en unités de l'actif
+  ts        INTEGER NOT NULL,
+  PRIMARY KEY (tx_hash, log_index)
+);
+CREATE INDEX IF NOT EXISTS fee_collections_token ON fee_collections(token);
 `);
 
 // migrations douces (bases déjà créées par une version précédente)
@@ -175,6 +187,13 @@ export const launchesRepo = {
   markDone(id: number, r: { token: string; pool: string; txHash: string; block: number; initPrice: number; tokenIsToken0: boolean }) {
     db.prepare(`UPDATE launches SET status='done', token=?, pool=?, tx_hash=?, launch_block=?, init_price=?, token_is0=? WHERE id=?`)
       .run(r.token, r.pool.toLowerCase(), r.txHash, r.block, r.initPrice, r.tokenIsToken0 ? 1 : 0, id);
+  },
+  /** la tx est partie : on garde son hash pour la rapprocher si la confirmation tarde */
+  markSent(id: number, txHash: string) {
+    db.prepare(`UPDATE launches SET tx_hash=? WHERE id=? AND status='pending'`).run(txHash, id);
+  },
+  pendingRows(): LaunchRow[] {
+    return db.prepare(`SELECT * FROM launches WHERE status='pending'`).all() as LaunchRow[];
   },
   markFailed(id: number, error: string) {
     db.prepare(`UPDATE launches SET status='failed', error=? WHERE id=?`).run(error.slice(0, 500), id);
@@ -278,6 +297,20 @@ export const referralsRepo = {
   },
   finishPayout(id: number, txHash: string | null, ok: boolean) {
     db.prepare(`UPDATE referral_payouts SET tx_hash=?, status=? WHERE id=?`).run(txHash, ok ? "done" : "failed", id);
+  },
+};
+
+export const feesRepo = {
+  insert(p: { txHash: string; logIndex: number; token: string; quoteAmt: number; ts: number }) {
+    db.prepare(`INSERT OR IGNORE INTO fee_collections (tx_hash, log_index, token, quote_amt, ts) VALUES (?,?,?,?,?)`)
+      .run(p.txHash, p.logIndex, p.token.toLowerCase(), p.quoteAmt, p.ts);
+  },
+  /** frais côté actif de paire collectés pour un token */
+  collected(token: string): number {
+    return (db.prepare(`SELECT COALESCE(SUM(quote_amt),0) q FROM fee_collections WHERE token=?`).get(token.toLowerCase()) as { q: number }).q;
+  },
+  lastAt(token: string): number {
+    return (db.prepare(`SELECT COALESCE(MAX(ts),0) t FROM fee_collections WHERE token=?`).get(token.toLowerCase()) as { t: number }).t;
   },
 };
 

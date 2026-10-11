@@ -39,6 +39,8 @@ Object.assign(process.env, {
   MIN_FOLLOWERS: "0",
   LAUNCHES_PER_USER_PER_DAY: process.env.LAUNCHES_PER_USER_PER_DAY ?? "20",
   INDEXER_INTERVAL_MS: "1500",
+  VERIFY_CONTRACTS: "0", // pas d'appel aux explorateurs en local
+  RPC_FALLBACKS: "",
 });
 
 const { launchToken } = await import("../src/chain.js");

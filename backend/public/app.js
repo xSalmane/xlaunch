@@ -6,10 +6,18 @@
     set(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {} },
   };
 
-  // jeton revenu d'une connexion en pleine page (#t=…)
+  // nonce de connexion : seul l'onglet qui a lancé la connexion accepte le jeton qui en revient
+  // (sinon un lien piégé …#t=<jeton de l'attaquant> connecterait la victime au compte de l'attaquant)
+  const NONCE = "xl_login_nonce";
+  const nonce = {
+    make() { const n = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join(""); try { sessionStorage.setItem(NONCE, n); } catch {} return n; },
+    take(n) { let ok = false; try { ok = !!n && sessionStorage.getItem(NONCE) === n; if (ok) sessionStorage.removeItem(NONCE); } catch {} return ok; },
+  };
+
+  // jeton revenu d'une connexion en pleine page (#t=…&n=…)
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get("t")) {
-    store.set(hash.get("t"));
+    if (nonce.take(hash.get("n"))) store.set(hash.get("t"));
     history.replaceState(null, "", location.pathname + location.search);
   }
 
@@ -41,11 +49,13 @@
   /** ouvre la connexion X en popup ; résout quand l'utilisateur est connecté */
   function login() {
     return new Promise((resolve, reject) => {
-      const url = "/auth/x/start?return=" + encodeURIComponent(location.pathname + location.search);
+      const n = nonce.make();
+      const url = "/auth/x/start?return=" + encodeURIComponent(location.pathname + location.search) + "&nonce=" + n;
       const w = window.open(url, "xlaunch-auth", "width=520,height=720");
       if (!w) { location.href = url; return; } // popup bloquée : connexion en pleine page
       const onMsg = (e) => {
         if (e.origin !== location.origin || e.data?.type !== "xlaunch-auth") return;
+        if (!nonce.take(e.data.nonce)) return;
         window.removeEventListener("message", onMsg);
         clearInterval(timer);
         store.set(e.data.token);

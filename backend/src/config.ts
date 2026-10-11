@@ -18,6 +18,11 @@ export const config = {
   // chaîne
   chain: (process.env.CHAIN ?? "base-sepolia") as "base" | "base-sepolia",
   rpcUrl: req("RPC_URL"),
+  // RPC de secours (séparés par des virgules). Sur Base mainnet, des RPC publics servent de relais si le principal sature.
+  rpcFallbacks: (process.env.RPC_FALLBACKS ??
+    ((process.env.CHAIN ?? "base-sepolia") === "base"
+      ? "https://mainnet.base.org,https://base-rpc.publicnode.com,https://base.llamarpc.com,https://base.drpc.org,https://1rpc.io/base"
+      : "")).split(",").map((u) => u.trim()).filter(Boolean),
   factory: req("FACTORY_ADDRESS") as Address,
   // contrat pas encore déployé (wallet pas encore approvisionné) : le site tourne, les lancements attendent
   factoryPending: process.env.FACTORY_PENDING === "1",

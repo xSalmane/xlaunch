@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!--META-->
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@400..800&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+
+</head>
+<body>
+<div class="app">
+  <aside class="side-nav" aria-label="Menu">
+    <a class="brand" href="/" aria-label="Bluebird home"><span class="brand-mark"></span><span class="brand-name">Bluebird</span></a>
+    <a class="nav-link" data-nav href="/app"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg><span>Home</span></a>
+    <a class="nav-link" data-nav href="/explore"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Explore</span></a>
+    <a class="nav-link" data-nav href="/me"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg><span>Earnings</span></a>
+    <a class="btn btn-launch" href="/app#compose" aria-label="Launch a token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-7 0-12 5-13 12l-3 4"/><path d="M7 16h6c4 0 6-4 7-8"/></svg><span class="lbl">Launch a token</span></a>
+    <div class="side-me" data-auth></div>
+  </aside>
+
+  <main class="column">
+    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>Bluebird</a><div data-auth></div></div>
+    <div class="col-head"><div class="col-title"><a class="back" href="/app" aria-label="Back"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg></a><h1>Terms of use</h1></div></div>
+    <article class="terms">
+      <p class="mute">Last updated: October 11, 2026</p>
+      <p>Bluebird is a tool that lets you create a token on the Base blockchain by signing in with your X account. By using the site or launching a token, you accept these terms. If you don't accept them, don't use Bluebird.</p>
+
+      <h2>1. Tokens are speculative</h2>
+      <p>Tokens launched on Bluebird have no intrinsic value, no issuer behind them and no promise of any return. Their price can drop to zero at any moment. Nothing on this site is investment, financial, legal or tax advice. Only put in what you can afford to lose entirely.</p>
+
+      <h2>2. How it works</h2>
+      <ul>
+        <li>Each token has a fixed supply of 1,000,000,000. The whole supply goes into a Uniswap v3 pool at launch: nobody, including Bluebird and the creator, receives tokens.</li>
+        <li>The liquidity position stays in the Bluebird contract forever and cannot be withdrawn.</li>
+        <li>Every trade pays a 1% pool fee. Half of the fees collected go to the token's creator, the rest to Bluebird.</li>
+        <li>Creator earnings are held under the creator's X account and can be claimed to a wallet. If you lose access to your X account, you may lose access to unclaimed earnings.</li>
+        <li>Bluebird pays the gas for launches and claims. We may limit, pause or stop this at any time.</li>
+      </ul>
+
+      <h2>3. Who can use Bluebird</h2>
+      <p>You must be at least 18 and allowed by the laws where you live to create and trade crypto-assets. You may not use Bluebird if you are located in, or a resident of, a country or region under comprehensive sanctions, or if you are on a sanctions list. You are responsible for following your local laws, including on taxes.</p>
+
+      <h2>4. What you may not launch</h2>
+      <p>You are responsible for the tokens you launch and what you say about them. Don't launch tokens that impersonate a person, brand or project, that present themselves as a security, an investment product or a stake in a company, that promote anything illegal, hateful or sexual involving minors, or that are designed to mislead buyers. We can refuse launches, hide tokens, comments or profiles from the site, and block accounts. Tokens already on the blockchain cannot be deleted by anyone.</p>
+
+      <h2>5. Risks you accept</h2>
+      <p>Blockchain transactions are irreversible. Smart contracts can contain bugs; Bluebird's contracts have not been audited by a third party. Prices, volumes and earnings shown on the site are estimates based on on-chain data and may be delayed or wrong. Third-party services (X, Base, Uniswap, wallets, trading bots, explorers) can fail or change without notice.</p>
+
+      <h2>6. Referral program</h2>
+      <p>Referrers earn a share of the fees Bluebird actually collects on tokens launched by the people they bring in, paid in ETH at the price at the time of payout. We may change, pause or end the program, set minimums and refuse payouts linked to abuse (fake accounts, self-referral, wash trading).</p>
+
+      <h2>7. Your data</h2>
+      <p>When you sign in with X, we store your X user id, handle, profile picture, account creation date and follower count, plus what you do on the site (launches, likes, comments, referrals). We don't ask for your email or your wallet's private keys. Public blockchain data is public by nature.</p>
+
+      <h2>8. No warranty</h2>
+      <p>Bluebird is provided "as is", without warranty of any kind. To the extent permitted by law, Bluebird is not liable for losses resulting from trading, token prices, bugs, outages, or third-party services.</p>
+
+      <h2>9. Changes</h2>
+      <p>We may update these terms. The date at the top shows the latest version; continuing to use the site means you accept it.</p>
+    </article>
+  </main>
+
+  <aside class="side-right" aria-label="Trending">
+    <div class="side-right-inner">
+      <form class="search" action="/explore" role="search"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input name="q" placeholder="Search tokens, $tickers, @creators" aria-label="Search tokens"></form>
+      <section class="box"><h2>Trending <small class="mute">most liked today</small></h2><div data-trends></div><a class="box-more" href="/explore?sort=trending">Show more</a></section>
+      <section class="box"><h2>By the numbers</h2><div class="stats-box" data-stats></div></section>
+      <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us. <a href="/terms">Terms</a></p>
+    </div>
+  </aside>
+</div>
+<nav class="tabbar" aria-label="Navigation">
+  <a data-nav href="/app" aria-label="Home"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+  <a data-nav href="/explore" aria-label="Explore"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
+  <a data-nav href="/me" aria-label="Earnings"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.2A6 6 0 1 1 9.2 15.5"/></svg></a>
+</nav>
+<a class="fab" href="/app#compose" aria-label="Launch a token"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
+</body>
+</html>

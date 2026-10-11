@@ -12,7 +12,8 @@ import { config } from "./config.js";
  */
 
 const REDIRECT_URI = `${config.publicUrl}/auth/x/callback`;
-const pending = new Map<string, { verifier: string; ret: string; exp: number }>();
+const pending = new Map<string, { verifier: string; ret: string; nonce: string; exp: number }>();
+const nonceOf = (v: unknown) => (/^[0-9a-f]{32}$/.test(String(v ?? "")) ? String(v) : "");
 const b64url = (b: Buffer) => b.toString("base64url");
 const safeReturn = (r: unknown) => (typeof r === "string" && /^\/(?!\/)[\w\-/?=&.%]*$/.test(r) ? r : "/");
 
@@ -31,14 +32,16 @@ export type Session = {
 export const authRouter = Router();
 
 authRouter.get("/auth/x/start", (req, res) => {
-  if (DEV_LOGIN) return res.redirect(`/auth/dev?return=${encodeURIComponent(safeReturn(req.query.return))}`);
+  if (DEV_LOGIN) return res.redirect(`/auth/dev?return=${encodeURIComponent(safeReturn(req.query.return))}&nonce=${nonceOf(req.query.nonce)}`);
   if (!config.xClientId || !config.xClientSecret)
     return res.status(503).send(page("Sign-in with X isn't set up on this site yet. Try again a bit later."));
   const state = b64url(crypto.randomBytes(24));
   const verifier = b64url(crypto.randomBytes(48));
   const challenge = b64url(crypto.createHash("sha256").update(verifier).digest());
-  pending.set(state, { verifier, ret: safeReturn(req.query.return), exp: Date.now() + 10 * 60_000 });
+  const nonce = nonceOf(req.query.nonce);
   for (const [k, v] of pending) if (v.exp < Date.now()) pending.delete(k);
+  if (pending.size > 5000) return res.status(503).send(page("Too many sign-ins right now. Try again in a minute."));
+  pending.set(state, { verifier, ret: safeReturn(req.query.return), nonce, exp: Date.now() + 10 * 60_000 });
 
   // encodage %20 (et non "+") pour les espaces, comme dans la documentation X
   const params: Record<string, string> = {
@@ -87,7 +90,7 @@ authRouter.get("/auth/x/callback", async (req, res) => {
       accountCreated: Math.floor(new Date(data.created_at).getTime() / 1000),
       followers: data.public_metrics.followers_count,
     });
-    finish(res, jwt, p.ret);
+    finish(res, jwt, p.ret, p.nonce);
   } catch (e) {
     console.error("oauth", e);
     res.status(502).send(page("X didn't respond to the sign-in. Close this window and try again."));
@@ -98,19 +101,20 @@ authRouter.get("/auth/x/callback", async (req, res) => {
 authRouter.get("/auth/dev", async (req, res) => {
   if (!DEV_LOGIN) return res.status(404).end();
   const ret = safeReturn(req.query.return);
+  const nonce = nonceOf(req.query.nonce);
   const handle = typeof req.query.handle === "string" ? req.query.handle.replace(/[^\w]/g, "").slice(0, 15) : "";
   if (!handle) {
     return res.send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Demo sign-in</title><body style="font-family:system-ui;max-width:360px;margin:48px auto;padding:0 16px">
 <h1 style="font-size:20px">Demo sign-in</h1>
 <p>Test mode: no X account is contacted. Pick a username.</p>
-<form><input type="hidden" name="return" value="${ret}">
+<form><input type="hidden" name="return" value="${ret.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}"><input type="hidden" name="nonce" value="${nonce}">
 <input name="handle" placeholder="username" required style="padding:10px;width:100%;margin-bottom:10px;font:inherit">
 <button style="padding:10px 16px;font:inherit">Sign in</button></form>`);
   }
   const id = String(BigInt("0x" + crypto.createHash("sha256").update(handle.toLowerCase()).digest("hex").slice(0, 15)));
   const jwt = await issue({ id, handle, avatar: "", accountCreated: 1_500_000_000, followers: 1000 });
-  finish(res, jwt, ret);
+  finish(res, jwt, ret, nonce);
 });
 
 async function issue(u: { id: string; handle: string; avatar: string; accountCreated: number; followers: number }) {
@@ -122,7 +126,7 @@ async function issue(u: { id: string; handle: string; avatar: string; accountCre
     .sign(config.jwtSecret);
 }
 
-function finish(res: Response, jwt: string, ret: string) {
+function finish(res: Response, jwt: string, ret: string, nonce: string) {
   res.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'");
   res.send(`<!doctype html><meta charset="utf-8"><title>Signed in</title>
 <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0">
@@ -130,8 +134,9 @@ function finish(res: Response, jwt: string, ret: string) {
 <script>
   const t = ${JSON.stringify(jwt)};
   const origin = ${JSON.stringify(config.publicUrl)};
-  if (window.opener) { try { window.opener.postMessage({ type: "xlaunch-auth", token: t }, origin); } catch (e) {} window.close(); }
-  setTimeout(() => location.replace(${JSON.stringify(ret)} + "#t=" + encodeURIComponent(t)), 300);
+  const n = ${JSON.stringify(nonce)};
+  if (window.opener) { try { window.opener.postMessage({ type: "xlaunch-auth", token: t, nonce: n }, origin); } catch (e) {} window.close(); }
+  setTimeout(() => location.replace(${JSON.stringify(ret)} + "#t=" + encodeURIComponent(t) + "&n=" + n), 300);
 </script>`);
 }
 

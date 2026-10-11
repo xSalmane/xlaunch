@@ -1,6 +1,6 @@
 import {
-  createPublicClient, createWalletClient, http, keccak256, toBytes, getContractAddress, parseEther,
-  parseEventLogs, toHex, type Address, type Hex,
+  createPublicClient, createWalletClient, http, fallback, keccak256, toBytes, getContractAddress, parseEther,
+  parseEventLogs, parseAbiItem, toHex, WaitForTransactionReceiptTimeoutError, type Address, type Hex, type TransactionReceipt,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
@@ -9,10 +9,15 @@ import { config } from "./config.js";
 import { factoryAbi } from "./abi.js";
 
 export const chain = config.chain === "base" ? base : baseSepolia;
-export const publicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
+// RPC principal puis RPC de secours : si l'un sature ou tombe, la requête part sur le suivant
+const rpcUrls = [...new Set([config.rpcUrl, ...config.rpcFallbacks])];
+const transport = rpcUrls.length > 1
+  ? fallback(rpcUrls.map((u) => http(u, { timeout: 15_000, retryCount: 1 })), { retryCount: 1 })
+  : http(config.rpcUrl);
+export const publicClient = createPublicClient({ chain, transport });
 export const relayer = privateKeyToAccount(config.relayerKey);
 const attester = privateKeyToAccount(config.attesterKey);
-export const wallet = createWalletClient({ chain, account: relayer, transport: http(config.rpcUrl) });
+export const wallet = createWalletClient({ chain, account: relayer, transport });
 
 export const factory = { address: config.factory, abi: factoryAbi } as const;
 
@@ -66,7 +71,7 @@ export async function relayerHasFunds(): Promise<boolean> {
   return bal >= parseEther(config.minRelayerBalanceEth.toString());
 }
 
-export async function launchToken(p: { name: string; symbol: string; image: string; xId: string; quote: PairAsset }) {
+export async function launchToken(p: { name: string; symbol: string; image: string; xId: string; quote: PairAsset; onSent?: (hash: Hex) => void }) {
   const creatorId = creatorIdOf(p.xId);
   const initCodeHash = await publicClient.readContract({
     ...factory, functionName: "tokenInitCodeHash", args: [p.name, p.symbol, p.image, creatorId],
@@ -82,18 +87,56 @@ export async function launchToken(p: { name: string; symbol: string; image: stri
       args: [p.name, p.symbol, p.image, creatorId, salt, p.quote.address, sqrtPriceX96, tickBound],
     });
     const hash = await wallet.writeContract(request);
-    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-    if (receipt.status !== "success") throw new Error("tx revert " + hash);
-    const [ev] = parseEventLogs({ abi: factoryAbi, eventName: "TokenLaunched", logs: receipt.logs });
-    if (!ev || ev.args.token.toLowerCase() !== predicted.toLowerCase()) throw new Error("event introuvable");
-    return {
-      token: ev.args.token,
-      pool: ev.args.pool,
-      txHash: hash,
-      block: Number(receipt.blockNumber),
-      tokenIsToken0: ev.args.tokenIsToken0,
-      initPrice: sqrtToPrice(sqrtPriceX96, ev.args.tokenIsToken0, p.quote.decimals),
-    };
+    p.onSent?.(hash); // la tx est partie : si l'attente échoue, on la rapprochera plus tard au lieu de la croire ratée
+    let receipt: TransactionReceipt;
+    try {
+      receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+    } catch (e) {
+      if (e instanceof WaitForTransactionReceiptTimeoutError) throw new LaunchPending(hash);
+      throw e;
+    }
+    const r = launchFromReceipt(receipt, p.quote.decimals);
+    if (r.token.toLowerCase() !== predicted.toLowerCase()) throw new Error("event introuvable");
+    return r;
+  });
+}
+
+/** la tx de lancement est envoyée mais pas encore confirmée */
+export class LaunchPending extends Error {
+  constructor(public hash: Hex) { super("launch pending " + hash); }
+}
+
+const INITIALIZE = parseAbiItem("event Initialize(uint160 sqrtPriceX96, int24 tick)");
+/** lit le résultat d'un lancement dans le reçu (token, pool, prix de départ) */
+export function launchFromReceipt(receipt: TransactionReceipt, quoteDecimals: number) {
+  if (receipt.status !== "success") throw new Error("tx revert " + receipt.transactionHash);
+  const [ev] = parseEventLogs({ abi: factoryAbi, eventName: "TokenLaunched", logs: receipt.logs });
+  if (!ev) throw new Error("event introuvable");
+  const [init] = parseEventLogs({ abi: [INITIALIZE], logs: receipt.logs.filter((l) => l.address.toLowerCase() === ev.args.pool.toLowerCase()) });
+  return {
+    token: ev.args.token,
+    pool: ev.args.pool,
+    txHash: receipt.transactionHash,
+    block: Number(receipt.blockNumber),
+    tokenIsToken0: ev.args.tokenIsToken0,
+    initPrice: init ? sqrtToPrice(init.args.sqrtPriceX96, ev.args.tokenIsToken0, quoteDecimals) : 0,
+  };
+}
+
+/** ramasse les frais de trading de ces tokens (le relayer paie le gas) et renvoie les événements FeesCollected */
+export async function collectFees(tokens: Address[]) {
+  if (config.factoryPending || !tokens.length) return [];
+  return serial(async () => {
+    const out = [];
+    for (let i = 0; i < tokens.length; i += 25) {
+      const { request } = await publicClient.simulateContract({
+        ...factory, account: relayer, functionName: "collectFeesMany", args: [tokens.slice(i, i + 25)],
+      });
+      const h = await wallet.writeContract(request);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: h, timeout: 120_000 });
+      out.push(...parseEventLogs({ abi: factoryAbi, eventName: "FeesCollected", logs: receipt.logs }));
+    }
+    return out;
   });
 }
 
@@ -167,12 +210,22 @@ export const relayerAddress = relayer.address;
 export const attesterAddress = attester.address;
 export const chainId = chain.id;
 
-/** envoi d'ETH depuis le wallet de la plateforme (versements de parrainage) */
+/**
+ * Envoi d'ETH depuis le wallet de la plateforme (versements de parrainage).
+ * La tx est signée localement et son hash enregistré AVANT la diffusion : même si le RPC
+ * répond mal, on sait qu'elle a pu partir et on ne la compte jamais comme échouée.
+ */
 export async function sendEth(to: Address, wei: bigint, onSent: (hash: Hex) => void): Promise<{ txHash: Hex }> {
   return serial(async () => {
-    const hash = await wallet.sendTransaction({ to, value: wei });
-    onSent(hash); // à partir d'ici, l'argent est peut-être parti : on ne doit plus jamais compter ce versement comme échoué
-    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+    const req = await wallet.prepareTransactionRequest({ to, value: wei });
+    const raw = await relayer.signTransaction({ ...req, chainId: chain.id } as never);
+    const hash = keccak256(raw);
+    onSent(hash); // à partir d'ici, l'argent est peut-être parti
+    await publicClient.sendRawTransaction({ serializedTransaction: raw }).catch((e) => {
+      // "already known" / "nonce too low" : la même tx a déjà été diffusée, on attend son reçu
+      if (!/already known|nonce too low|known transaction/i.test(String(e?.message))) throw e;
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (receipt.status !== "success") throw new Error("transfer revert " + hash);
     return { txHash: hash };
   });

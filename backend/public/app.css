@@ -550,3 +550,10 @@ body.has-banner .side-nav { height: calc(100vh - 30px); }
 
 /* ============================================================ logo Bluebird (l'oiseau-terminal) */
 .brand-mark { background: url("/static/logo.svg") center / contain no-repeat !important; box-shadow: none !important; border-radius: 0 !important; }
+
+/* conditions d'utilisation */
+.terms { padding: 8px 20px 48px; max-width: 680px; line-height: 1.6; }
+.terms h2 { font: 700 18px/1.3 var(--display); margin: 28px 0 8px; }
+.terms ul { padding-left: 20px; }
+.terms li { margin: 6px 0; }
+.legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

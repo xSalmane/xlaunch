@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { createPublicClient, createWalletClient, http as rpc, formatEther, parseEther, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http as rpc, formatEther, parseEther, encodeAbiParameters, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
 
@@ -43,8 +43,25 @@ console.log(`Chaîne ${env.CHAIN} — relayer (paie le gas) : ${relayer.address}
 
 // ------------------------------------------------------------------ contrat
 const factoryFile = path.join(DATA, `factory-v2-${chain.id}.json`);
+const POSITION_MANAGER: Record<number, Address> = {
+  // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
+  8453: "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
+  84532: "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2",
+};
+const WETH: Address = "0x4200000000000000000000000000000000000006";
+const factoryArgs = () => [
+  (env.OWNER_ADDRESS ?? relayer.address) as Address, POSITION_MANAGER[chain.id], WETH, relayer.address, attester.address,
+  (env.TREASURY_ADDRESS ?? relayer.address) as Address, Number(env.CREATOR_FEE_BPS ?? 5000),
+] as const;
 if (!env.FACTORY_ADDRESS && fs.existsSync(factoryFile)) {
-  env.FACTORY_ADDRESS = JSON.parse(fs.readFileSync(factoryFile, "utf8")).address;
+  const f = JSON.parse(fs.readFileSync(factoryFile, "utf8"));
+  env.FACTORY_ADDRESS = f.address;
+  // pour vérifier le code du contrat sur les explorateurs : tx de création et arguments du constructeur
+  env.FACTORY_TX = f.tx;
+  env.FACTORY_ARGS = f.args ?? encodeAbiParameters(
+    [{ type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "uint16" }],
+    factoryArgs()
+  );
 }
 
 if (!env.FACTORY_ADDRESS) {
@@ -57,12 +74,6 @@ if (!env.FACTORY_ADDRESS) {
 await import("./server.js");
 
 async function installFactory() {
-  const POSITION_MANAGER: Record<number, Address> = {
-    // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
-    8453: "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
-    84532: "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2",
-  };
-  const WETH: Address = "0x4200000000000000000000000000000000000006";
   const NEEDED = parseEther(env.SETUP_MIN_ETH ?? "0.005");
   const pub = createPublicClient({ chain, transport: rpc(env.RPC_URL) });
   const wallet = createWalletClient({ chain, account: relayer, transport: rpc(env.RPC_URL) });
@@ -75,16 +86,15 @@ async function installFactory() {
     try {
       const balance = await pub.getBalance({ address: relayer.address });
       if (balance >= NEEDED) {
-        const owner = (env.OWNER_ADDRESS ?? relayer.address) as Address;
-        const treasury = (env.TREASURY_ADDRESS ?? relayer.address) as Address;
-        const hash = await wallet.deployContract({
-          abi: artifact.abi,
-          bytecode: artifact.bytecode,
-          args: [owner, POSITION_MANAGER[chain.id], WETH, relayer.address, attester.address, treasury, Number(env.CREATOR_FEE_BPS ?? 5000)],
-        });
+        const args = factoryArgs();
+        const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args });
         const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
         if (receipt.status !== "success" || !receipt.contractAddress) throw new Error("déploiement échoué " + hash);
-        fs.writeFileSync(factoryFile, JSON.stringify({ address: receipt.contractAddress, tx: hash, at: new Date().toISOString() }));
+        const encoded = encodeAbiParameters(
+          [{ type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "address" }, { type: "uint16" }],
+          args
+        );
+        fs.writeFileSync(factoryFile, JSON.stringify({ address: receipt.contractAddress, tx: hash, args: encoded, at: new Date().toISOString() }));
         console.log(`XLaunchFactory déployé : ${receipt.contractAddress} (tx ${hash}). Redémarrage pour ouvrir les lancements.`);
         // la plateforme redémarre (Railway relance le service) et charge le contrat depuis le disque
         process.exit(1);

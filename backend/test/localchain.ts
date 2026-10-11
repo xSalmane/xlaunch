@@ -25,6 +25,8 @@ export type LocalChain = {
   routerAbi: Abi;
   treasury: Address;
   usdc: Address; // faux USDC (6 décimales), minter = relayer
+  uniFactory: Address;
+  npm: Address;
   stop: () => void;
 };
 
@@ -81,5 +83,5 @@ export async function startLocalChain(opts: { port?: number; treasury?: Address;
   const mock = JSON.parse(fs.readFileSync(new URL("../../contracts/out/MockAsset.json", import.meta.url), "utf8"));
   const usdc = await deploy(mock.abi, mock.bytecode, ["USD Coin (test)", "USDC", 6, privateKeyToAccount(KEYS.relayer).address]);
 
-  return { rpc, factory, router, routerAbi: routerArt.abi, treasury, usdc, stop: () => anvil.kill() };
+  return { rpc, factory, router, routerAbi: routerArt.abi, treasury, usdc, uniFactory, npm, stop: () => anvil.kill() };
 }

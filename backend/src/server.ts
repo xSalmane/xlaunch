@@ -5,13 +5,18 @@ import crypto from "node:crypto";
 import { isAddress, getAddress, parseEther, type Address } from "viem";
 import { config, blocklist, explorer } from "./config.js";
 import { authRouter, requireAuth, softAuth, eligibility, DEV_LOGIN, type Session } from "./auth.js";
-import { launchesRepo, claimsRepo, likesRepo, commentsRepo, referralsRepo, usersRepo, type CommentRow } from "./db.js";
-import { launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps, sendEth, relayerBalance } from "./chain.js";
+import { launchesRepo, claimsRepo, likesRepo, commentsRepo, referralsRepo, usersRepo, feesRepo, kv, db, type CommentRow } from "./db.js";
+import {
+  launchToken, relayerHasFunds, creatorState, claimFor, chainId, relayerAddress, creatorFeeBps, sendEth, relayerBalance,
+  collectFees, LaunchPending, launchFromReceipt, publicClient,
+} from "./chain.js";
+import { imageSize } from "./imagesize.js";
 import { listTokens, getToken, trades, chart, globalStats, activity } from "./market.js";
 import { smartFollowers, frontrunEnabled } from "./frontrun.js";
 import { renderTokenCard } from "./og.js";
 import { initQuotes, getQuotes, quoteOf, quoteUsd, mintTestStocks } from "./quotes.js";
-import { startIndexer } from "./indexer.js";
+import { startIndexer, recordFeeLogs } from "./indexer.js";
+import { startVerifier } from "./verify.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -118,6 +123,10 @@ app.get("/t/:token", (req, res) => {
   }));
 });
 // profil public d'un créateur (ses tokens, ses likes, ses smart followers)
+app.get("/terms", (_req, res) => {
+  res.type("html").send(render("terms.html", { title: "Terms of use — Bluebird", description: "The rules for using Bluebird and the risks of launching and trading tokens." }));
+});
+
 app.get("/p/:handle", (req, res) => {
   const handle = String(req.params.handle).replace(/[^\w]/g, "").slice(0, 15);
   res.type("html").send(render("me.html", { title: `@${handle} — Bluebird`, description: `Tokens launched by @${handle} on Base, and who follows them.` }));
@@ -164,6 +173,21 @@ app.get("/api/config", async (_req, res) => {
 });
 
 app.get("/api/stats", (_req, res) => res.json(globalStats()));
+
+/** état de la plateforme (solde du wallet qui paie le gas) : sert à l'alerte de solde bas */
+app.get("/api/health", async (_req, res) => {
+  try {
+    const bal = Number(await relayerBalance()) / 1e18;
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true, chain: config.chain, launchesOpen: !config.factoryPending, relayer: relayerAddress,
+      relayerBalanceEth: bal, minBalanceEth: config.minRelayerBalanceEth,
+      low: bal < config.minRelayerBalanceEth * 3, launchesPaused: bal < config.minRelayerBalanceEth,
+    });
+  } catch (e) {
+    res.status(503).json({ ok: false, error: (e as Error).message });
+  }
+});
 app.get("/api/activity", (_req, res) => res.json(activity(24)));
 
 /** actifs avec lesquels on peut apparier un nouveau token */
@@ -182,14 +206,22 @@ function markLiked<T extends { token: string | null; liked: boolean }>(views: T[
   return views;
 }
 
+const listCache = new Map<string, { at: number; data: ReturnType<typeof listTokens> }>();
 app.get("/api/tokens", softAuth, async (req, res) => {
-  res.json(markLiked(listTokens({
+  const o = {
     sort: String(req.query.sort ?? "new"),
     q: String(req.query.q ?? "").slice(0, 64),
-    limit: Number(req.query.limit ?? 30),
-    offset: Number(req.query.offset ?? 0),
-    creatorFeeBps: await creatorFeeBps(),
-  }), res.locals.session));
+    limit: Math.min(100, Math.max(1, Number(req.query.limit) || 30)),
+    offset: Math.min(10_000, Math.max(0, Number(req.query.offset) || 0)),
+  };
+  const key = JSON.stringify(o);
+  let hit = listCache.get(key);
+  if (!hit || Date.now() - hit.at > 3000) {
+    hit = { at: Date.now(), data: listTokens({ ...o, creatorFeeBps: await creatorFeeBps() }) };
+    if (listCache.size > 300) listCache.clear();
+    listCache.set(key, hit);
+  }
+  res.json(markLiked(structuredClone(hit.data), res.locals.session));
 });
 
 // compat embed
@@ -208,7 +240,7 @@ app.get("/api/token/:token", softAuth, async (req, res) => {
 app.get("/api/token/:token/trades", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
   if (!row) return res.status(404).json({ error: "No Bluebird token at this address." });
-  res.json(trades(row, Number(req.query.limit ?? 50)));
+  res.json(trades(row, Math.min(200, Math.max(1, Number(req.query.limit) || 50))));
 });
 
 app.get("/api/token/:token/chart", (req, res) => {
@@ -246,11 +278,17 @@ app.post(
   express.raw({ type: ["image/png", "image/jpeg", "image/gif", "image/webp"], limit: "1mb" }),
   (req, res) => {
     const s = res.locals.session as Session;
+    const why = eligibility(s);
+    if (why) return res.status(403).json({ error: why });
     const buf = req.body as Buffer;
     if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Pick a PNG, JPG, GIF or WebP image, 1 MB max." });
     const kind = MAGIC.find(([, sig]) => sig.every((b, i) => buf[i] === b));
     if (!kind || (kind[0] === "webp" && buf.subarray(8, 12).toString() !== "WEBP"))
       return res.status(400).json({ error: "This file isn't a PNG, JPG, GIF or WebP image." });
+    // une image minuscule en octets peut faire des milliards de pixels une fois décodée : on lit l'en-tête
+    const dim = imageSize(buf);
+    if (!dim || dim.width > 2048 || dim.height > 2048 || dim.width < 16 || dim.height < 16)
+      return res.status(400).json({ error: "Use an image between 16×16 and 2048×2048 pixels." });
 
     const day = Math.floor(Date.now() / 86_400_000);
     const u = uploadsToday.get(s.sub);
@@ -300,10 +338,14 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
   if (slot === "global_limit") return res.status(429).json({ error: "Lots of launches right now. Try again in a few minutes." });
 
   try {
-    const r = await launchToken({ name, symbol, image, xId: s.sub, quote });
+    const r = await launchToken({ name, symbol, image, xId: s.sub, quote, onSent: (h) => launchesRepo.markSent(slot, h) });
     launchesRepo.markDone(slot, r);
     res.json({ token: r.token, txHash: r.txHash, share: `${config.publicUrl}/t/${r.token}`, explorer: `${explorer}/token/${r.token}` });
   } catch (e) {
+    if (e instanceof LaunchPending) {
+      // la tx est partie mais Base tarde à confirmer : on la rapproche en arrière-plan
+      return res.status(504).json({ error: "Your launch was sent but is slow to confirm. It will show up on your profile in a few minutes.", txHash: e.hash });
+    }
     console.error("launch", e);
     launchesRepo.markFailed(slot, String(e));
     res.status(500).json({ error: "The deployment failed. It didn't count against your quota, so you can try again." });
@@ -341,10 +383,22 @@ app.post("/api/claim", requireAuth, express.json({ limit: "2kb" }), async (req, 
   if (Date.now() / 1000 - s.iat > config.claimMaxAuthAgeSec)
     return res.status(401).json({ error: "For security, sign in with X again to claim.", reauth: true });
   if (claiming.has(s.sub)) return res.status(429).json({ error: "A claim is already in progress." });
+  const why = eligibility(s);
+  if (why) return res.status(403).json({ error: why });
+  if (config.factoryPending) return res.status(400).json({ error: "Nothing to claim yet." });
+  // chaque réclamation coûte du gas à la plateforme : une toutes les 10 minutes au plus
+  const lastClaim = Number(kv.get("claim:last:" + s.sub) ?? 0);
+  if (Date.now() / 1000 - lastClaim < 600) return res.status(429).json({ error: "You just claimed. Try again in a few minutes." });
 
   claiming.add(s.sub);
   try {
     const rows = launchesRepo.byUser(s.sub);
+    // rien en séquestre et aucun trade depuis la dernière réclamation : inutile de payer une tx
+    const state = await creatorState(s.sub, creatorAssets(rows.map((x) => ({ token: x.token!, quote: x.quote }))));
+    const escrowed = state.escrow.some((e) => BigInt(e.amount) > 0n);
+    const traded = rows.some((r) => r.pool && (db.prepare(`SELECT 1 FROM swaps WHERE pool=? AND ts>? LIMIT 1`).get(r.pool, lastClaim)));
+    if (!escrowed && !traded) return res.status(400).json({ error: "Nothing to claim yet." });
+    kv.set("claim:last:" + s.sub, String(Math.floor(Date.now() / 1000)));
     const tokens = rows.map((r) => r.token as Address);
     const r = await claimFor(s.sub, getAddress(recipient), tokens, creatorAssets(rows.map((x) => ({ token: x.token!, quote: x.quote }))));
     claimsRepo.insert(s.sub, recipient, r.txHash);
@@ -410,11 +464,17 @@ app.post("/api/referral", requireAuth, express.json({ limit: "1kb" }), (req, res
   res.json({ attached, referrer: referrer.handle });
 });
 
+/**
+ * Gains de parrainage : une part de ce que la plateforme a VRAIMENT touché sur les tokens des filleuls,
+ * d'après les événements FeesCollected du contrat (côté actif de paire). Pas le volume : il se gonfle
+ * par wash trading contre sa propre liquidité, alors que les frais collectés, eux, ne mentent pas.
+ */
 async function referralState(xId: string) {
   const fee = await creatorFeeBps();
   const friends = referralsRepo.referredBy(xId).map((f) => {
-    const tokens = listTokens({ xId: f.x_id, limit: 100, creatorFeeBps: fee });
-    return { handle: f.handle, joinedAt: f.created_at, tokens: tokens.length, platformFeesUsd: tokens.reduce((a, t) => a + t.platformFeesUsd, 0) };
+    const rows = launchesRepo.byUser(f.x_id);
+    const platformFeesUsd = rows.reduce((a, r) => a + feesRepo.collected(r.token!) * quoteUsd(r.quote) * (1 - fee / 10_000), 0);
+    return { handle: f.handle, joinedAt: f.created_at, tokens: rows.length, platformFeesUsd };
   });
   const earnedUsd = friends.reduce((a, f) => a + f.platformFeesUsd, 0) * (config.referralBps / 10_000);
   const paidUsd = referralsRepo.paidUsd(xId);
@@ -447,6 +507,11 @@ app.post("/api/referrals/claim", requireAuth, express.json({ limit: "1kb" }), as
   paying.add(s.sub);
   let id = 0, sent = false;
   try {
+    // on ramasse d'abord les frais en attente des tokens des filleuls, pour payer sur des chiffres à jour
+    const pendingTokens = referralsRepo.referredBy(s.sub).flatMap((f) => launchesRepo.byUser(f.x_id))
+      .filter((r) => r.pool && db.prepare(`SELECT 1 FROM swaps WHERE pool=? AND ts>? LIMIT 1`).get(r.pool, feesRepo.lastAt(r.token!)))
+      .map((r) => getAddress(r.token!));
+    if (pendingTokens.length) await recordFeeLogs(await collectFees(pendingTokens.slice(0, 100)));
     const st = await referralState(s.sub);
     if (st.availableUsd < config.referralMinPayoutUsd)
       return res.status(400).json({ error: `Nothing to claim yet: payouts start at $${config.referralMinPayoutUsd}.` });
@@ -517,6 +582,8 @@ app.post("/api/like", requireAuth, express.json({ limit: "1kb" }), (req, res) =>
   const s = res.locals.session as Session;
   const token = String(req.body?.token ?? "");
   if (!isAddress(token) || !launchesRepo.byToken(token)) return res.status(404).json({ error: "No Bluebird token at this address." });
+  const why = eligibility(s);
+  if (why) return res.status(403).json({ error: why });
   const r = likeRate.get(s.sub);
   const nowMs = Date.now();
   if (r && nowMs - r.t < 60_000 && r.n >= 60) return res.status(429).json({ error: "Slow down a little: too many likes in a minute." });
@@ -557,8 +624,65 @@ app.post("/api/test-faucet", requireAuth, express.json({ limit: "2kb" }), async 
 app.use("/api", (_req, res) => res.status(404).json({ error: "Unknown route." }));
 app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page not found — Bluebird", description: "" })));
 
+// lancements envoyés mais pas encore confirmés (RPC lent, redémarrage pendant l'attente)
+async function reconcileLaunches() {
+  for (const r of launchesRepo.pendingRows()) {
+    const age = Date.now() / 1000 - r.created_at;
+    if (!r.tx_hash) {
+      // jamais envoyé (plantage avant la diffusion) : on libère le quota au bout de 10 minutes
+      if (age > 600) launchesRepo.markFailed(r.id, "not sent");
+      continue;
+    }
+    try {
+      const receipt = await publicClient.getTransactionReceipt({ hash: r.tx_hash as `0x${string}` }).catch(() => null);
+      if (!receipt) { if (age > 3600) launchesRepo.markFailed(r.id, "not mined"); continue; }
+      if (receipt.status !== "success") { launchesRepo.markFailed(r.id, "reverted"); continue; }
+      launchesRepo.markDone(r.id, launchFromReceipt(receipt, r.quote_decimals));
+      console.log(`lancement rapproché : $${r.symbol} (${r.tx_hash})`);
+    } catch (e) {
+      console.error("reconcile", (e as Error).message);
+    }
+  }
+}
+setInterval(() => void reconcileLaunches(), 30_000);
+
+// toutes les heures : on ramasse les frais des tokens des filleuls qui ont tradé, pour que les gains de parrainage avancent
+async function collectReferralFees() {
+  if (!config.referralPayouts || config.factoryPending) return;
+  const rows = (db.prepare(`SELECT l.token, l.pool FROM launches l JOIN referrals r ON r.x_id=l.x_id WHERE l.status='done'`).all() as { token: string; pool: string }[])
+    .filter((r) => db.prepare(`SELECT 1 FROM swaps WHERE pool=? AND ts>? LIMIT 1`).get(r.pool, feesRepo.lastAt(r.token)));
+  if (!rows.length || !(await relayerHasFunds())) return;
+  try {
+    await recordFeeLogs(await collectFees(rows.slice(0, 200).map((r) => getAddress(r.token))));
+  } catch (e) {
+    console.error("collecte des frais", (e as Error).message);
+  }
+}
+setInterval(() => void collectReferralFees(), 3_600_000);
+
+// sauvegarde quotidienne de la base (7 jours gardés) sur le disque persistant
+async function backupDb() {
+  if (config.dbPath === ":memory:") return;
+  const dir = path.join(config.dataDir, "backups");
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `bluebird-${new Date().toISOString().slice(0, 10)}.db`);
+  if (fs.existsSync(file)) return;
+  try {
+    await db.backup(file);
+    const old = fs.readdirSync(dir).filter((f) => /^bluebird-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -7);
+    for (const f of old) fs.rmSync(path.join(dir, f), { force: true });
+    console.log("base sauvegardée :", file);
+  } catch (e) {
+    console.error("sauvegarde", (e as Error).message);
+  }
+}
+setTimeout(() => void backupDb(), 120_000);
+setInterval(() => void backupDb(), 3_600_000);
+
 await initQuotes();
 startIndexer();
+void reconcileLaunches();
+startVerifier(process.env.FACTORY_TX ? { tx: process.env.FACTORY_TX as `0x${string}`, args: process.env.FACTORY_ARGS as `0x${string}` } : undefined);
 app.listen(config.port, () => {
   console.log(`Bluebird on ${config.publicUrl} (port ${config.port}) — chain ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — demo login enabled" : ""}`);
 });

@@ -1,6 +1,7 @@
 import { parseAbiItem, type Address, type Log } from "viem";
-import { db, kv, launchesRepo } from "./db.js";
-import { publicClient, sqrtToPrice } from "./chain.js";
+import { db, kv, launchesRepo, feesRepo } from "./db.js";
+import { publicClient, sqrtToPrice, factory } from "./chain.js";
+import { config } from "./config.js";
 
 /**
  * Suit les swaps de toutes les pools lancées et les enregistre en base :
@@ -99,6 +100,34 @@ async function scan(pools: string[], from: bigint, to: bigint) {
   }
 }
 
+// frais réellement collectés par le contrat : base des gains de parrainage
+const FEES = parseAbiItem("event FeesCollected(address indexed token, uint256 tokenAmount, uint256 quoteAmount)");
+export async function recordFeeLogs(logs: { args: { token?: Address; quoteAmount?: bigint }; transactionHash: string | null; logIndex: number | null; blockNumber: bigint | null }[]) {
+  for (const l of logs) {
+    const token = l.args.token, amt = l.args.quoteAmount;
+    if (!token || amt === undefined || !l.transactionHash || l.logIndex === null) continue;
+    const row = launchesRepo.byToken(token);
+    if (!row) continue;
+    const ts = l.blockNumber ? await timestampOf(l.blockNumber) : Math.floor(Date.now() / 1000);
+    feesRepo.insert({ txHash: l.transactionHash, logIndex: l.logIndex, token, quoteAmt: Number(amt) / 10 ** row.quote_decimals, ts });
+  }
+}
+async function scanFees(from: bigint, to: bigint) {
+  let start = from;
+  while (start <= to) {
+    const end = start + chunk - 1n > to ? to : start + chunk - 1n;
+    try {
+      const logs = await publicClient.getLogs({ address: factory.address, event: FEES, fromBlock: start, toBlock: end, strict: true });
+      await recordFeeLogs(logs);
+      start = end + 1n;
+    } catch (e) {
+      const limit = rangeLimit(e);
+      if (!limit) throw e;
+      chunk = limit;
+    }
+  }
+}
+
 async function tick() {
   const latest = await publicClient.getBlockNumber();
   const last = kv.get("indexer:last") ? BigInt(kv.get("indexer:last")!) : latest;
@@ -114,6 +143,7 @@ async function tick() {
   }
 
   if (latest > last && known.size) await scan([...known], last + 1n, latest);
+  if (latest > last && !config.factoryPending) await scanFees(last + 1n, latest);
   kv.set("indexer:last", latest.toString());
 }
 

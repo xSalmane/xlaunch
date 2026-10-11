@@ -60,7 +60,7 @@ def page(script, content):
       <form class="search" action="/explore" role="search">{i("search","sm")}<input name="q" placeholder="Search tokens, $tickers, @creators" aria-label="Search tokens"></form>
       <section class="box"><h2>Trending <small class="mute">most liked today</small></h2><div data-trends></div><a class="box-more" href="/explore?sort=trending">Show more</a></section>
       <section class="box"><h2>By the numbers</h2><div class="stats-box" data-stats></div></section>
-      <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us.</p>
+      <p class="legal">Speculative tokens on Base: only put in what you can afford to lose. 100% of supply in a locked Uniswap pool, gas on us. <a href="/terms">Terms</a></p>
     </div>
   </aside>
 </div>
@@ -178,6 +178,7 @@ TOKEN = f'''    <div class="col-head">
         <div><dt>Pair</dt><dd id="fPair"></dd></div>
         <div><dt>Contract</dt><dd><a id="fAddr" target="_blank" rel="noopener"></a></dd></div>
         <div><dt>Pool</dt><dd><a id="fPool" target="_blank" rel="noopener"></a></dd></div>
+        <div id="fChartsRow" hidden><dt>Charts</dt><dd><a id="fDex" target="_blank" rel="noopener">DexScreener</a> · <a id="fGecko" target="_blank" rel="noopener">GeckoTerminal</a></dd></div>
         <div><dt>Supply</dt><dd>1,000,000,000, 100% in the pool</dd></div>
         <div><dt>Trading fee</dt><dd>1%, <span data-fee-share>half</span> to the creator</dd></div>
         <div><dt>Liquidity</dt><dd>Locked forever</dd></div>
@@ -284,6 +285,45 @@ ME = f'''    <div class="col-head">
 NOTFOUND = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><h1>Not found</h1></div></div>
     <div class="feed-empty"><b>This page doesn't exist</b>This address doesn't match any page or Bluebird token.<div style="margin-top:14px"><a class="btn" href="/explore">Explore tokens</a></div></div>'''
 
-for name, script, content in [("index", "home.js", HOME), ("explore", "explore.js", EXPLORE), ("token", "token.js", TOKEN), ("me", "me.js", ME), ("404", None, NOTFOUND)]:
+TERMS = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><h1>Terms of use</h1></div></div>
+    <article class="terms">
+      <p class="mute">Last updated: October 11, 2026</p>
+      <p>Bluebird is a tool that lets you create a token on the Base blockchain by signing in with your X account. By using the site or launching a token, you accept these terms. If you don't accept them, don't use Bluebird.</p>
+
+      <h2>1. Tokens are speculative</h2>
+      <p>Tokens launched on Bluebird have no intrinsic value, no issuer behind them and no promise of any return. Their price can drop to zero at any moment. Nothing on this site is investment, financial, legal or tax advice. Only put in what you can afford to lose entirely.</p>
+
+      <h2>2. How it works</h2>
+      <ul>
+        <li>Each token has a fixed supply of 1,000,000,000. The whole supply goes into a Uniswap v3 pool at launch: nobody, including Bluebird and the creator, receives tokens.</li>
+        <li>The liquidity position stays in the Bluebird contract forever and cannot be withdrawn.</li>
+        <li>Every trade pays a 1% pool fee. Half of the fees collected go to the token's creator, the rest to Bluebird.</li>
+        <li>Creator earnings are held under the creator's X account and can be claimed to a wallet. If you lose access to your X account, you may lose access to unclaimed earnings.</li>
+        <li>Bluebird pays the gas for launches and claims. We may limit, pause or stop this at any time.</li>
+      </ul>
+
+      <h2>3. Who can use Bluebird</h2>
+      <p>You must be at least 18 and allowed by the laws where you live to create and trade crypto-assets. You may not use Bluebird if you are located in, or a resident of, a country or region under comprehensive sanctions, or if you are on a sanctions list. You are responsible for following your local laws, including on taxes.</p>
+
+      <h2>4. What you may not launch</h2>
+      <p>You are responsible for the tokens you launch and what you say about them. Don't launch tokens that impersonate a person, brand or project, that present themselves as a security, an investment product or a stake in a company, that promote anything illegal, hateful or sexual involving minors, or that are designed to mislead buyers. We can refuse launches, hide tokens, comments or profiles from the site, and block accounts. Tokens already on the blockchain cannot be deleted by anyone.</p>
+
+      <h2>5. Risks you accept</h2>
+      <p>Blockchain transactions are irreversible. Smart contracts can contain bugs; Bluebird's contracts have not been audited by a third party. Prices, volumes and earnings shown on the site are estimates based on on-chain data and may be delayed or wrong. Third-party services (X, Base, Uniswap, wallets, trading bots, explorers) can fail or change without notice.</p>
+
+      <h2>6. Referral program</h2>
+      <p>Referrers earn a share of the fees Bluebird actually collects on tokens launched by the people they bring in, paid in ETH at the price at the time of payout. We may change, pause or end the program, set minimums and refuse payouts linked to abuse (fake accounts, self-referral, wash trading).</p>
+
+      <h2>7. Your data</h2>
+      <p>When you sign in with X, we store your X user id, handle, profile picture, account creation date and follower count, plus what you do on the site (launches, likes, comments, referrals). We don't ask for your email or your wallet's private keys. Public blockchain data is public by nature.</p>
+
+      <h2>8. No warranty</h2>
+      <p>Bluebird is provided "as is", without warranty of any kind. To the extent permitted by law, Bluebird is not liable for losses resulting from trading, token prices, bugs, outages, or third-party services.</p>
+
+      <h2>9. Changes</h2>
+      <p>We may update these terms. The date at the top shows the latest version; continuing to use the site means you accept it.</p>
+    </article>'''
+
+for name, script, content in [("index", "home.js", HOME), ("explore", "explore.js", EXPLORE), ("token", "token.js", TOKEN), ("me", "me.js", ME), ("404", None, NOTFOUND), ("terms", None, TERMS)]:
     (PUB / f"{name}.html").write_text(page(script, content))
 print("pages générées")

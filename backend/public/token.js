@@ -24,6 +24,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("fAddr").href = `${cfg.explorer}/token/${t.token}`;
       $("fPool").textContent = fmt.short(t.pool);
       $("fPool").href = `${cfg.explorer}/address/${t.pool}`;
+      if (cfg.chain === "base") {
+        // pool Uniswap v3 officielle : DexScreener et GeckoTerminal l'indexent dès le premier trade
+        $("fDex").href = `https://dexscreener.com/base/${t.pool}`;
+        $("fGecko").href = `https://www.geckoterminal.com/base/pools/${t.pool}`;
+        $("fChartsRow").hidden = false;
+      }
       const d = new Date(t.createdAt * 1000);
       $("tMeta").dataset.when = `${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     } else {
