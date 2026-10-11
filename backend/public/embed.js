@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("cwd").textContent = CWD[name];
     clearInterval(feedTimer);
     if (name === "trending" || name === "new") {
-      $("feedCmd").textContent = name === "trending" ? "xlaunch top --sort hot --live" : "xlaunch ls --new --live";
+      $("feedCmd").textContent = name === "trending" ? "bluebird top --sort hot --live" : "bluebird ls --new --live";
       prev.clear(); loadFeed(); feedTimer = setInterval(loadFeed, 5000);
     }
     if (name === "token") loadInfo();
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   let quotaText = "gas is on us";
   XL.onAuth((me) => {
-    $("who").textContent = me ? `${me.handle}@base` : "xlaunch@base";
+    $("who").textContent = me ? `${me.handle}@base` : "bluebird@base";
     $("login").hidden = !!me || XL.isLogged();
     if (!me) quotaText = "gas is on us · login with X to launch";
     else if (me.ineligible) quotaText = me.ineligible.toLowerCase();
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pane === "trending" || pane === "new") loadFeed();
     if (pane === "token") loadInfo();
   });
-  api("/api/config").then((c) => { $("intro").textContent = `XLaunch · ${c.chain === "base" ? "Base" : "Base Sepolia (testnet)"} · gas sponsored`; }).catch(() => {});
+  api("/api/config").then((c) => { $("intro").textContent = `Bluebird · ${c.chain === "base" ? "Base" : "Base Sepolia (testnet)"} · gas sponsored`; }).catch(() => {});
 
   // ------------------------------------------------------------ la commande launch
   let touched = false;
@@ -123,9 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await quick(`Uniswap v3 pool ${fmt.esc(symbol)}/${fmt.esc(pair)} created · 1% fee`);
       await quick(`100% of supply seeded into the pool`);
       await quick(`liquidity locked forever`);
-      line(`gas paid by xlaunch · you paid $0`, "dim");
+      line(`gas paid by bluebird · you paid $0`, "dim");
       line(fmt.esc(asciiCoin(symbol)), "ascii");
-      line(`<span class="ok">● LIVE</span> <a href="/t/${fmt.esc(r.token)}">xlaunch/t/${short(r.token)}</a>`);
+      line(`<span class="ok">● LIVE</span> <a href="/t/${fmt.esc(r.token)}">bluebird/t/${short(r.token)}</a>`);
       line(`<div class="btns"><a class="btn-t" href="${XL.tweetUrl(`I just launched $${symbol} on Base 🔵`, r.share)}">share on x</a><a class="btn-t btn-o" href="/t/${fmt.esc(r.token)}">open chart</a><button class="btn-t btn-o" type="button" data-again>launch another</button></div>`);
       $("composer").querySelectorAll("input, select").forEach((el) => (el.disabled = true));
       $("runrow").hidden = true;
@@ -166,12 +166,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (m.attributeName === "class" && b.classList?.contains("t-like")) { const on = b.classList.contains("on"); if (b.firstChild && b.firstChild.nodeType === 3) b.firstChild.textContent = on ? "♥ " : "♡ "; }
   })).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
 
-  // ------------------------------------------------------------ xlaunch info : le token partagé dans le tweet
+  // ------------------------------------------------------------ bluebird info : le token partagé dans le tweet
   async function loadInfo() {
     try {
       const t = await api("/api/token/" + encodeURIComponent(sharedToken));
-      document.title = `$${t.symbol} on XLaunch`;
-      $("infoCmd").textContent = `xlaunch info $${t.symbol}`;
+      document.title = `$${t.symbol} on Bluebird`;
+      $("infoCmd").textContent = `bluebird info $${t.symbol}`;
       $("info").innerHTML = `<div class="ln ascii">${fmt.esc(asciiCoin(t.symbol))}</div>
         <dl class="kv" data-token="${fmt.esc(t.token)}">
           <dt>name</dt><dd>${fmt.esc(t.name)}</dd>

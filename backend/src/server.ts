@@ -87,7 +87,7 @@ function render(file: string, meta: { title: string; description: string; player
 // vitrine
 app.get("/", (_req, res) => {
   res.type("html").send(render("landing.html", {
-    title: "XLaunch — launch your token on Base, right from X",
+    title: "Bluebird — launch your token on Base, right from X",
     description: "A name, a ticker, one click. Gas is on us, and you earn a share of every trade.",
     player: `${config.publicUrl}/embed`,
   }));
@@ -95,23 +95,23 @@ app.get("/", (_req, res) => {
 // l'app (fil, lancement)
 app.get("/app", (_req, res) => {
   res.type("html").send(render("index.html", {
-    title: "XLaunch — launch your token on Base, right from X",
+    title: "Bluebird — launch your token on Base, right from X",
     description: "A name, a ticker, one click. Gas is on us, and you earn a share of every trade.",
     player: `${config.publicUrl}/embed`,
   }));
 });
 app.get("/explore", (_req, res) => {
-  res.type("html").send(render("explore.html", { title: "Explore — XLaunch", description: "Every token launched from X on Base." }));
+  res.type("html").send(render("explore.html", { title: "Explore — Bluebird", description: "Every token launched from X on Base." }));
 });
 app.get("/me", (_req, res) => {
-  res.type("html").send(render("me.html", { title: "Earnings — XLaunch", description: "Your tokens and your trading fees." }));
+  res.type("html").send(render("me.html", { title: "Earnings — Bluebird", description: "Your tokens and your trading fees." }));
 });
 app.get("/t/:token", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).type("html").send(render("404.html", { title: "Token not found — XLaunch", description: "" }));
+  if (!row) return res.status(404).type("html").send(render("404.html", { title: "Token not found — Bluebird", description: "" }));
   res.type("html").send(render("token.html", {
     title: `$${row.symbol} — ${row.name}`,
-    description: row.description || `Launched by @${row.handle} on Base via XLaunch.`,
+    description: row.description || `Launched by @${row.handle} on Base via Bluebird.`,
     player: `${config.publicUrl}/embed?token=${row.token}`,
     // l'heure dans l'URL force X à reprendre une image à jour au lieu de sa vieille copie
     image: `${config.publicUrl}/og/${row.token}.png?t=${Math.floor(Date.now() / 600_000)}`,
@@ -120,7 +120,7 @@ app.get("/t/:token", (req, res) => {
 // profil public d'un créateur (ses tokens, ses likes, ses smart followers)
 app.get("/p/:handle", (req, res) => {
   const handle = String(req.params.handle).replace(/[^\w]/g, "").slice(0, 15);
-  res.type("html").send(render("me.html", { title: `@${handle} — XLaunch`, description: `Tokens launched by @${handle} on Base, and who follows them.` }));
+  res.type("html").send(render("me.html", { title: `@${handle} — Bluebird`, description: `Tokens launched by @${handle} on Base, and who follows them.` }));
 });
 // image de partage d'un token (gardée 5 minutes : la market cap bouge)
 const ogCache = new Map<string, { at: number; png: Buffer }>();
@@ -134,7 +134,7 @@ app.get("/og/:file", async (req, res) => {
   const t = listTokens({ q: token, limit: 1, creatorFeeBps: fee }).find((x) => x.token?.toLowerCase() === key);
   if (!t) return res.status(404).end();
   try {
-    const png = renderTokenCard(t, { uploadDir, chainLabel: config.chain === "base" ? "BASE" : "BASE SEPOLIA · TESTNET", site: "XLaunch" });
+    const png = renderTokenCard(t, { uploadDir, chainLabel: config.chain === "base" ? "BASE" : "BASE SEPOLIA · TESTNET", site: "Bluebird" });
     if (ogCache.size > 500) ogCache.clear();
     ogCache.set(key, { at: Date.now(), png });
     res.type("png").set("Cache-Control", "public, max-age=300").send(png);
@@ -200,20 +200,20 @@ app.get("/api/recent", softAuth, async (_req, res) => {
 app.get("/api/token/:token", softAuth, async (req, res) => {
   const addr = String(req.params.token);
   const t = isAddress(addr) ? getToken(addr, await creatorFeeBps()) : undefined;
-  if (!t) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!t) return res.status(404).json({ error: "No Bluebird token at this address." });
   markLiked([t], res.locals.session);
   res.json({ ...t, explorer: `${explorer}/token/${t.token}` });
 });
 
 app.get("/api/token/:token/trades", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!row) return res.status(404).json({ error: "No Bluebird token at this address." });
   res.json(trades(row, Number(req.query.limit ?? 50)));
 });
 
 app.get("/api/token/:token/chart", (req, res) => {
   const row = isAddress(req.params.token) ? launchesRepo.byToken(req.params.token) : undefined;
-  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!row) return res.status(404).json({ error: "No Bluebird token at this address." });
   res.json(chart(row));
 });
 
@@ -479,7 +479,7 @@ const commentView = (c: CommentRow, s: Session | undefined, creatorXId: string) 
 });
 app.get("/api/token/:token/comments", softAuth, (req, res) => {
   const row = isAddress(String(req.params.token)) ? launchesRepo.byToken(String(req.params.token)) : undefined;
-  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!row) return res.status(404).json({ error: "No Bluebird token at this address." });
   const before = Math.max(0, Number(req.query.before) || 0);
   const list = commentsRepo.list(row.token!, 50, before);
   res.json(list.map((c) => commentView(c, res.locals.session, row.x_id)));
@@ -487,7 +487,7 @@ app.get("/api/token/:token/comments", softAuth, (req, res) => {
 app.post("/api/token/:token/comments", requireAuth, express.json({ limit: "4kb" }), (req, res) => {
   const s = res.locals.session as Session;
   const row = isAddress(String(req.params.token)) ? launchesRepo.byToken(String(req.params.token)) : undefined;
-  if (!row) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!row) return res.status(404).json({ error: "No Bluebird token at this address." });
   const body = String(req.body?.body ?? "").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").replace(/\n{3,}/g, "\n\n").trim();
   if (!body) return res.status(400).json({ error: "Write something first." });
   if ([...body].length > 280) return res.status(400).json({ error: "Comments are 280 characters max." });
@@ -515,7 +515,7 @@ const likeRate = new Map<string, { n: number; t: number }>();
 app.post("/api/like", requireAuth, express.json({ limit: "1kb" }), (req, res) => {
   const s = res.locals.session as Session;
   const token = String(req.body?.token ?? "");
-  if (!isAddress(token) || !launchesRepo.byToken(token)) return res.status(404).json({ error: "No XLaunch token at this address." });
+  if (!isAddress(token) || !launchesRepo.byToken(token)) return res.status(404).json({ error: "No Bluebird token at this address." });
   const r = likeRate.get(s.sub);
   const nowMs = Date.now();
   if (r && nowMs - r.t < 60_000 && r.n >= 60) return res.status(429).json({ error: "Slow down a little: too many likes in a minute." });
@@ -554,10 +554,10 @@ app.post("/api/test-faucet", requireAuth, express.json({ limit: "2kb" }), async 
 });
 
 app.use("/api", (_req, res) => res.status(404).json({ error: "Unknown route." }));
-app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page not found — XLaunch", description: "" })));
+app.use((_req, res) => res.status(404).type("html").send(render("404.html", { title: "Page not found — Bluebird", description: "" })));
 
 await initQuotes();
 startIndexer();
 app.listen(config.port, () => {
-  console.log(`XLaunch on ${config.publicUrl} (port ${config.port}) — chain ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — demo login enabled" : ""}`);
+  console.log(`Bluebird on ${config.publicUrl} (port ${config.port}) — chain ${config.chain} — relayer ${relayerAddress}${DEV_LOGIN ? " — demo login enabled" : ""}`);
 });

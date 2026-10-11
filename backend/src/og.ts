@@ -124,7 +124,7 @@ export function renderTokenCard(t: TokenView & { spark?: number[] }, opts: { upl
   <path transform="translate(640,551)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.2 0 3.7 1.2 5.2 3 1.5-1.8 3-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z" fill="#fc401f"/>
   <text x="674" y="575" font-size="26" font-weight="700" fill="#ffffff">${t.likes}<tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.trades} trade${t.trades === 1 ? "" : "s"}</tspan><tspan dx="28" fill="#ffffff" fill-opacity="0.65" font-weight="500">${t.comments} comment${t.comments === 1 ? "" : "s"}</tspan></text>
   <rect x="0" y="${H - 8}" width="${W}" height="8" fill="#0000ff"/>
-  <circle cx="${Math.round(1130 - opts.site.length * 30 * 0.66 - 26)}" cy="52" r="12" fill="none" stroke="#0000ff" stroke-width="5"/><circle cx="${Math.round(1130 - opts.site.length * 30 * 0.66 - 26)}" cy="52" r="4.5" fill="#0000ff"/>
+  <circle cx="${Math.round(1130 - opts.site.length * 30 * 0.555 - 20)}" cy="52" r="12" fill="none" stroke="#0000ff" stroke-width="5"/><circle cx="${Math.round(1130 - opts.site.length * 30 * 0.555 - 20)}" cy="52" r="4.5" fill="#0000ff"/>
   <text x="1130" y="62" font-family="Funnel Display" font-size="30" font-weight="700" fill="#ffffff" text-anchor="end">${esc(opts.site)}</text>
   <text x="1130" y="94" font-size="16" font-weight="700" fill="#ffffff" fill-opacity="0.45" text-anchor="end" letter-spacing="2">${esc(opts.chainLabel)}</text>
 </svg>`;

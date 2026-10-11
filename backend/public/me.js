@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("mineEmpty").hidden = !!tokens.length;
     $("mineEmpty").innerHTML = own
       ? `<b>No tokens launched</b>Your first token is one post away.<div style="margin-top:14px"><a class="btn" href="/app#compose">Launch my token</a></div>`
-      : `<b>No tokens yet</b>@${fmt.esc(pub)} hasn't launched a token on XLaunch.`;
+      : `<b>No tokens yet</b>@${fmt.esc(pub)} hasn't launched a token on Bluebird.`;
     $("sTokens").textContent = tokens.length;
     $("sTokens").nextSibling.textContent = tokens.length === 1 ? " token" : " tokens";
     $("pSub").textContent = `${tokens.length} token${tokens.length === 1 ? "" : "s"} launched`;
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     header({ handle: pub, avatar: "" });
     const loadPub = async () => {
       const p = await api("/api/profile/" + encodeURIComponent(pub));
-      if (!loaded) { loaded = true; header(p); $("pTitle").textContent = `@${p.handle}`; document.title = `@${p.handle} — XLaunch`; }
+      if (!loaded) { loaded = true; header(p); $("pTitle").textContent = `@${p.handle}`; document.title = `@${p.handle} — Bluebird`; }
       tokensGrid(p.tokens, false);
       $("sLikes").textContent = fmt.count(p.likesReceived);
       $("sLikes").nextSibling.textContent = p.likesReceived === 1 ? " like" : " likes";

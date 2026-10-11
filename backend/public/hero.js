@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <article class="ln-tw" id="lnTw">
           <header class="ln-tw-head"><span class="ln-av" id="lnAv"></span><div class="ln-who"><b id="lnName"></b><span id="lnHandle"></span></div>${X_PATH}</header>
           <p class="ln-text"><span id="lnTyped"></span><span class="tw-caret"></span></p>
-          <footer class="ln-tw-foot"><span>Gas paid by XLaunch</span><span class="ln-post" id="lnPost">Post</span></footer>
+          <footer class="ln-tw-foot"><span>Gas paid by Bluebird</span><span class="ln-post" id="lnPost">Post</span></footer>
         </article>
       </div>`;
     const $ = (id) => document.getElementById(id);

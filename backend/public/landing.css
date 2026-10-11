@@ -1,4 +1,4 @@
-/* Vitrine XLaunch : blanc/noir/gris de Base, le bleu Base réservé à l'action ; le mur de tokens est la pièce maîtresse */
+/* Vitrine Bluebird : blanc/noir/gris de Base, le bleu Base réservé à l'action ; le mur de tokens est la pièce maîtresse */
 body.l { background: var(--bg); font-size: 16px; }
 .l main { overflow-x: clip; }
 .l h1, .l h2, .l h3 { font-family: var(--display); color: var(--ink); margin: 0; }

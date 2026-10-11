@@ -1,4 +1,4 @@
-// XLaunch — code partagé par toutes les pages : session X, API, formats, posts, colonne de droite, effets
+// Bluebird — code partagé par toutes les pages : session X, API, formats, posts, colonne de droite, effets
 (() => {
   const KEY = "xl_token";
   const store = {

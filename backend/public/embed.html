@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XLaunch</title>
+<title>Bluebird</title>
 <!-- dans le tweet, chaque lien s'ouvre dans un nouvel onglet au lieu de remplacer la carte -->
 <base target="_blank">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,7 +82,7 @@
 </head>
 <body data-compact>
 <header class="bar">
-  <span class="usr" id="who">xlaunch@base</span><span class="cwd" id="cwd">~/launch</span>
+  <span class="usr" id="who">bluebird@base</span><span class="cwd" id="cwd">~/launch</span>
   <nav class="tabs" role="tablist">
     <button type="button" role="tab" data-pane="launch" aria-selected="true">launch</button>
     <button type="button" role="tab" data-pane="trending" aria-selected="false">top</button>
@@ -93,7 +93,7 @@
 
 <!-- lancement -->
 <section class="scr" id="vLaunch" aria-live="polite">
-  <div class="ln dim" id="intro">XLaunch · Base · gas sponsored</div>
+  <div class="ln dim" id="intro">Bluebird · Base · gas sponsored</div>
   <div class="ln dim">fill the command, hit run. no wallet needed.</div>
   <form class="cmd" id="composer" novalidate>
     <div class="cl"><span class="pr">$</span> launch "<input id="name" maxlength="32" autocomplete="off" spellcheck="false" placeholder="token name" aria-label="Token name">" <span class="bs">\</span></div>
@@ -108,14 +108,14 @@
 
 <!-- top / new -->
 <section class="scr" id="vFeed" hidden>
-  <div class="ln"><span class="pr">$</span> <span id="feedCmd">xlaunch top --sort hot --live</span></div>
+  <div class="ln"><span class="pr">$</span> <span id="feedCmd">bluebird top --sort hot --live</span></div>
   <table id="tbl"></table>
   <div class="ln dim" id="feedNote" style="margin-top:8px"></div>
 </section>
 
 <!-- token partagé (?token=…) -->
 <section class="scr" id="vToken" hidden>
-  <div class="ln"><span class="pr">$</span> <span id="infoCmd">xlaunch info</span></div>
+  <div class="ln"><span class="pr">$</span> <span id="infoCmd">bluebird info</span></div>
   <div id="info"><div class="ln dim">loading…</div></div>
 </section>
 </body>

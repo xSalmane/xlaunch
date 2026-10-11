@@ -41,7 +41,7 @@ def page(script, content):
 <body>
 <div class="app">
   <aside class="side-nav" aria-label="Menu">
-    <a class="brand" href="/" aria-label="XLaunch home"><span class="brand-mark"></span><span class="brand-name">XLaunch</span></a>
+    <a class="brand" href="/" aria-label="Bluebird home"><span class="brand-mark"></span><span class="brand-name">Bluebird</span></a>
     <a class="nav-link" data-nav href="/app">{i("home")}<span>Home</span></a>
     <a class="nav-link" data-nav href="/explore">{i("search")}<span>Explore</span></a>
     <a class="nav-link" data-nav href="/me">{i("coins")}<span>Earnings</span></a>
@@ -50,7 +50,7 @@ def page(script, content):
   </aside>
 
   <main class="column">
-    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>XLaunch</a><div data-auth></div></div>
+    <div class="mtop"><a class="brand" href="/"><span class="brand-mark"></span>Bluebird</a><div data-auth></div></div>
 {content}
   </main>
 
@@ -225,7 +225,7 @@ ME = f'''    <div class="col-head">
         </div>
         <div class="ref-link"><input class="input" id="refLink" readonly aria-label="Your referral link"><button class="btn quiet" type="button" id="refCopy">{i("copy","sm")}Copy</button></div>
         <a class="btn ink wide" id="refShare" target="_blank" rel="noopener" style="margin-top:8px"></a>
-        <p class="mute" style="font-size:13px;margin:8px 0 0">Every token you share from XLaunch already carries your link.</p>
+        <p class="mute" style="font-size:13px;margin:8px 0 0">Every token you share from Bluebird already carries your link.</p>
         <dl class="ref-stats">
           <div><dt>Friends joined</dt><dd id="refFriends">0</dd></div>
           <div><dt>Tokens they launched</dt><dd id="refTokens">0</dd></div>
@@ -281,7 +281,7 @@ ME = f'''    <div class="col-head">
     </div>'''
 
 NOTFOUND = f'''    <div class="col-head"><div class="col-title"><a class="back" href="/app" aria-label="Back">{i("back")}</a><h1>Not found</h1></div></div>
-    <div class="feed-empty"><b>This page doesn't exist</b>This address doesn't match any page or XLaunch token.<div style="margin-top:14px"><a class="btn" href="/explore">Explore tokens</a></div></div>'''
+    <div class="feed-empty"><b>This page doesn't exist</b>This address doesn't match any page or Bluebird token.<div style="margin-top:14px"><a class="btn" href="/explore">Explore tokens</a></div></div>'''
 
 for name, script, content in [("index", "home.js", HOME), ("explore", "explore.js", EXPLORE), ("token", "token.js", TOKEN), ("me", "me.js", ME), ("404", None, NOTFOUND)]:
     (PUB / f"{name}.html").write_text(page(script, content))

@@ -73,9 +73,9 @@ async function installFactory() {
   const server = http.createServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="10"><title>XLaunch — setup</title>
+<meta http-equiv="refresh" content="10"><title>Bluebird — setup</title>
 <body style="font-family:system-ui;max-width:640px;margin:48px auto;padding:0 16px;line-height:1.5;color:#0b1b3f;background:#f3f6fc">
-<h1 style="margin-bottom:4px">XLaunch is setting up</h1>
+<h1 style="margin-bottom:4px">Bluebird is setting up</h1>
 <p style="color:#5a6a8a;margin-top:0">${chain.name}. This page refreshes on its own.</p>
 <p><b>${status}</b></p>
 <p>Send at least <b>${formatEther(NEEDED)} ${chain.id === 84532 ? "test ETH (Base Sepolia)" : "ETH on Base"}</b> to this address. It pays for deploying the contract, then for the gas of every launch:</p>
