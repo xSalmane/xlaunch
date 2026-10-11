@@ -99,6 +99,7 @@ export async function launchToken(p: { name: string; symbol: string; image: stri
 
 let feeBpsCache: number | undefined;
 export async function creatorFeeBps(): Promise<number> {
+  if (config.factoryPending) return Number(process.env.CREATOR_FEE_BPS ?? 5000);
   if (feeBpsCache === undefined) {
     feeBpsCache = Number(await publicClient.readContract({ ...factory, functionName: "creatorFeeBps" }));
   }
@@ -107,6 +108,7 @@ export async function creatorFeeBps(): Promise<number> {
 
 /** séquestre du créateur pour chaque actif demandé (ses tokens + les actifs de paire utilisés) */
 export async function creatorState(xId: string, assets: Address[]) {
+  if (config.factoryPending) return { boundWallet: null, escrow: assets.map((asset) => ({ asset, amount: "0" })) };
   const creatorId = creatorIdOf(xId);
   const [bound, ...balances] = await Promise.all([
     publicClient.readContract({ ...factory, functionName: "boundWallet", args: [creatorId] }),
@@ -123,6 +125,7 @@ export async function creatorState(xId: string, assets: Address[]) {
  * L'attester signe, le relayer soumet : l'utilisateur ne paie aucun gas.
  */
 export async function claimFor(xId: string, recipient: Address, tokens: Address[], assets: Address[]) {
+  if (config.factoryPending) throw new Error("Nothing to claim yet.");
   const creatorId = creatorIdOf(xId);
 
   return serial(async () => {

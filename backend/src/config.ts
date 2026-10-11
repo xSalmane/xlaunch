@@ -19,6 +19,8 @@ export const config = {
   chain: (process.env.CHAIN ?? "base-sepolia") as "base" | "base-sepolia",
   rpcUrl: req("RPC_URL"),
   factory: req("FACTORY_ADDRESS") as Address,
+  // contrat pas encore déployé (wallet pas encore approvisionné) : le site tourne, les lancements attendent
+  factoryPending: process.env.FACTORY_PENDING === "1",
   weth: "0x4200000000000000000000000000000000000006" as Address,
   relayerKey: req("RELAYER_PRIVATE_KEY") as Hex,
   attesterKey: req("ATTESTER_PRIVATE_KEY") as Hex, // clé DIFFÉRENTE du relayer

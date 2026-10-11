@@ -1,12 +1,11 @@
 // Point d'entrée en production (Railway). Installation automatique au premier démarrage :
 //  1. clés relayer / attester / JWT générées sur le disque persistant (jamais affichées)
-//  2. si le contrat n'est pas encore déployé : page d'installation qui affiche l'adresse
-//     à approvisionner, puis déploiement automatique de XLaunchFactory dès que l'ETH arrive
+//  2. si le contrat n'est pas encore déployé : le site démarre quand même (lancements fermés),
+//     et XLaunchFactory se déploie tout seul dès que le wallet de la plateforme reçoit de l'ETH
 //  3. démarrage du site
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import http from "node:http";
 import { createPublicClient, createWalletClient, http as rpc, formatEther, parseEther, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
@@ -49,7 +48,11 @@ if (!env.FACTORY_ADDRESS && fs.existsSync(factoryFile)) {
 }
 
 if (!env.FACTORY_ADDRESS) {
-  await installFactory();
+  // pas encore de contrat : le site démarre quand même (lancements fermés) et le contrat
+  // se déploie tout seul dès que le wallet de la plateforme reçoit de l'ETH
+  env.FACTORY_ADDRESS = "0x0000000000000000000000000000000000000000";
+  env.FACTORY_PENDING = "1";
+  void installFactory();
 }
 await import("./server.js");
 
@@ -66,33 +69,12 @@ async function installFactory() {
   const artifact = JSON.parse(
     fs.readFileSync(new URL("../../contracts/out/XLaunchFactory.json", import.meta.url), "utf8")
   );
-
-  let balance = 0n;
-  let status = "Waiting for ETH on the relayer wallet.";
-
-  const server = http.createServer((_req, res) => {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-    res.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="10"><title>Bluebird — setup</title>
-<body style="font-family:system-ui;max-width:640px;margin:48px auto;padding:0 16px;line-height:1.5;color:#0b1b3f;background:#f3f6fc">
-<h1 style="margin-bottom:4px">Bluebird is setting up</h1>
-<p style="color:#5a6a8a;margin-top:0">${chain.name}. This page refreshes on its own.</p>
-<p><b>${status}</b></p>
-<p>Send at least <b>${formatEther(NEEDED)} ${chain.id === 84532 ? "test ETH (Base Sepolia)" : "ETH on Base"}</b> to this address. It pays for deploying the contract, then for the gas of every launch:</p>
-<p style="font:16px ui-monospace,monospace;background:#fff;border:1px solid #d5deee;padding:12px;border-radius:8px;word-break:break-all">${relayer.address}</p>
-<p>Current balance: <b>${formatEther(balance)} ETH</b></p>
-${chain.id === 84532 ? `<p style="color:#5a6a8a">Free test ETH: Coinbase Developer Platform faucet (pick Base Sepolia).</p>` : ""}
-</body></html>`);
-  });
-  const port = Number(env.PORT ?? 8787);
-  await new Promise<void>((r) => server.listen(port, r));
-  console.log(`Installation : envoie ${formatEther(NEEDED)} ETH à ${relayer.address} (page sur le port ${port})`);
+  console.log(`Contrat pas encore déployé : lancements fermés. Il se déploie dès que ${relayer.address} a ${formatEther(NEEDED)} ETH.`);
 
   for (;;) {
     try {
-      balance = await pub.getBalance({ address: relayer.address });
+      const balance = await pub.getBalance({ address: relayer.address });
       if (balance >= NEEDED) {
-        status = "ETH received. Deploying the contract…";
         const owner = (env.OWNER_ADDRESS ?? relayer.address) as Address;
         const treasury = (env.TREASURY_ADDRESS ?? relayer.address) as Address;
         const hash = await wallet.deployContract({
@@ -103,16 +85,13 @@ ${chain.id === 84532 ? `<p style="color:#5a6a8a">Free test ETH: Coinbase Develop
         const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
         if (receipt.status !== "success" || !receipt.contractAddress) throw new Error("déploiement échoué " + hash);
         fs.writeFileSync(factoryFile, JSON.stringify({ address: receipt.contractAddress, tx: hash, at: new Date().toISOString() }));
-        env.FACTORY_ADDRESS = receipt.contractAddress;
-        console.log(`XLaunchFactory déployé : ${receipt.contractAddress} (tx ${hash})`);
-        break;
+        console.log(`XLaunchFactory déployé : ${receipt.contractAddress} (tx ${hash}). Redémarrage pour ouvrir les lancements.`);
+        // la plateforme redémarre (Railway relance le service) et charge le contrat depuis le disque
+        process.exit(1);
       }
     } catch (e) {
-      status = "Temporary error, retrying in 15 seconds.";
       console.error("installation", (e as Error).message);
     }
-    await new Promise((r) => setTimeout(r, 15_000));
+    await new Promise((r) => setTimeout(r, 30_000));
   }
-  server.closeAllConnections();
-  await new Promise<void>((r) => server.close(() => r()));
 }

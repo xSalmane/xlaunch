@@ -32,19 +32,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (XL.isLogged()) { await XL.refreshMe(); if (XL.me) return true; }
     try { await XL.login(); return !!XL.me; } catch { return false; }
   }
-  let quotaText = "gas is on us";
+  let quotaText = "gas is on us", soon = false;
   XL.onAuth((me) => {
     $("who").textContent = me ? `${me.handle}@base` : "bluebird@base";
     $("login").hidden = !!me || XL.isLogged();
     if (!me) quotaText = "gas is on us · login with X to launch";
     else if (me.ineligible) quotaText = me.ineligible.toLowerCase();
     else { const left = Math.max(0, me.perDay - me.launchesLast24h); quotaText = left ? `gas is on us · ${left} launch${left > 1 ? "es" : ""} left today` : "daily limit reached"; }
-    $("launchBtn").disabled = !!me && (!!me.ineligible || me.perDay - me.launchesLast24h <= 0);
+    $("launchBtn").disabled = soon || (!!me && (!!me.ineligible || me.perDay - me.launchesLast24h <= 0));
+    if (soon) quotaText = "launches open very soon";
     setQuota();
     if (pane === "trending" || pane === "new") loadFeed();
     if (pane === "token") loadInfo();
   });
-  api("/api/config").then((c) => { $("intro").textContent = `Bluebird · ${c.chain === "base" ? "Base" : "Base Sepolia (testnet)"} · gas sponsored`; }).catch(() => {});
+  // contrat pas encore déployé : lancements fermés
+  api("/api/config").then((c) => {
+    $("intro").textContent = `Bluebird · ${c.chain === "base" ? "Base" : "Base Sepolia (testnet)"} · gas sponsored`;
+    if (c.launchesOpen === false) { soon = true; quotaText = "launches open very soon"; $("launchBtn").disabled = true; setQuota(); }
+  }).catch(() => {});
 
   // ------------------------------------------------------------ la commande launch
   let touched = false;

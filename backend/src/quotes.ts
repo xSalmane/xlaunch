@@ -114,7 +114,7 @@ export async function initQuotes() {
   }));
 
   // liste blanche du contrat : on autorise ce qui manque (le relayer est owner par défaut)
-  const allowed = await Promise.all(list.map((q) =>
+  const allowed = config.factoryPending ? list.map(() => true) : await Promise.all(list.map((q) =>
     publicClient.readContract({ ...factory, functionName: "quoteAllowed", args: [q.address] }).catch(() => false)
   ));
   const missing = list.filter((_, i) => !allowed[i]).map((q) => q.address);

@@ -158,7 +158,7 @@ app.use("/u", express.static(uploadDir, {
 app.get("/api/config", async (_req, res) => {
   res.json({
     chainId, chain: config.chain, explorer, factory: config.factory, weth: config.weth,
-    creatorFeeBps: await creatorFeeBps(), devLogin: DEV_LOGIN, testFaucet: getQuotes().some((q) => q.mock),
+    creatorFeeBps: await creatorFeeBps(), launchesOpen: !config.factoryPending, devLogin: DEV_LOGIN, testFaucet: getQuotes().some((q) => q.mock),
     rules: { minAccountAgeDays: config.minAccountAgeDays, minFollowers: config.minFollowers, perDay: config.launchesPerUserPerDay },
   });
 });
@@ -287,6 +287,7 @@ app.post("/api/launch", requireAuth, express.json({ limit: "10kb" }), async (req
 
   const why = eligibility(s);
   if (why) return res.status(403).json({ error: why });
+  if (config.factoryPending) return res.status(503).json({ error: "Launches open very soon. Come back in a bit!" });
   if (!(await relayerHasFunds())) return res.status(503).json({ error: "Launches are paused for now. Try again a bit later." });
 
   const slot = launchesRepo.reserve(

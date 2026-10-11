@@ -77,7 +77,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ------------------------------------------------------------ quota
+  // contrat pas encore déployé : on montre tout, mais les lancements attendent
+  let soon = false;
+  const closeLaunch = () => { $("quota").textContent = "Launches open very soon."; $("launchBtn").disabled = true; };
+  api("/api/config").then((c) => { soon = c.launchesOpen === false; if (soon) closeLaunch(); }).catch(() => {});
   XL.onAuth((me) => {
+    if (soon) return closeLaunch();
     if (!me) { $("quota").textContent = "Sign in with X to launch. Gas is on us."; $("launchBtn").disabled = false; return; }
     if (me.ineligible) { $("quota").textContent = me.ineligible; $("launchBtn").disabled = true; return; }
     const left = Math.max(0, me.perDay - me.launchesLast24h);
